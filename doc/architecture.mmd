@@ -1,0 +1,29 @@
+flowchart TB
+    index["index.html | 前端入口&儀表板"]
+    loadBtn["loadData | 重新整理按鈕"]
+    calcLoop["stock loop | 循環 12 支標的"]
+    fetchStockData["fetchStockData | 數據獲取"]
+    fetchYahooData["fetchYahooData | Yahoo API 代理"]
+    proxyService["Proxy | 代理服務轉發"]
+    yahooAPI["Yahoo Finance API | 實時行情源"]
+    kdCalc["calculateKD | 計算 KD 指標"]
+    analyzeLogic["analyzeData | 投資分析"]
+    tableRender["dataTable | 表格渲染"]
+    stockData["targets | 股票列表配置"]
+    
+    index -->|加載完成 onload| loadBtn
+    loadBtn -->|user click 觸發| calcLoop
+    calcLoop -->|遍歷每支| fetchStockData
+    stockData -->|傳遞標的| fetchStockData
+    fetchStockData -->|調用| fetchYahooData
+    fetchYahooData -->|發送請求 encodeURIComponent| proxyService
+    proxyService -->|轉發跨域 CORS| yahooAPI
+    yahooAPI -->|回傳 JSON 行情| fetchYahooData
+    fetchYahooData -->|解析 chart.result| fetchStockData
+    fetchStockData -->|傳遞 highs/lows/closes| kdCalc
+    kdCalc -->|計算 K 值 D 值| fetchStockData
+    fetchStockData -->|判斷 K 值 KD 交叉| analyzeLogic
+    analyzeLogic -->|決策 買進/賣出/觀望| fetchStockData
+    fetchStockData -->|累積結果 results| calcLoop
+    calcLoop -->|2秒 sleep 待完成| tableRender
+    tableRender -->|DOM createElement 渲染| index

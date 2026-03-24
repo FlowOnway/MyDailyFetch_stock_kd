@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日投資檢查</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .loader {
+            border-top-color: #3498db;
+            -webkit-animation: spinner 1.5s linear infinite;
+            animation: spinner 1.5s linear infinite;
+        }
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 p-6 min-h-screen">
+
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6 text-gray-900 flex items-center">
+            📊 每日投資檢查
+            <button onclick="loadData()" class="ml-4 text-sm bg-blue-600 hover:bg-blue-700 text-white py-1 px-3 rounded shadow transition">重新整理</button>
+        </h1>
+        
+        <div class="bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm whitespace-nowrap">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-medium text-gray-600">類別</th>
+                        <th class="px-4 py-3 text-left font-medium text-gray-600">標的名稱</th>
+                        <th class="px-4 py-3 text-left font-medium text-gray-600">代號</th>
+                        <th class="px-4 py-3 text-left font-medium text-gray-600">股價</th>
+                        <th class="px-4 py-3 text-left font-medium text-gray-600">K值</th>
+                        <th class="px-4 py-3 text-left font-medium text-gray-600">KD狀態</th>
+                        <th class="px-4 py-3 text-left font-medium text-gray-600">位置判斷</th>
+                        <th class="px-4 py-3 text-left font-medium text-gray-600">操作建議</th>
+                        <th class="px-4 py-3 text-left font-medium text-gray-600">備註</th>
+                        <th class="px-4 py-3 text-left font-medium text-gray-600">更新時間</th>
+                    </tr>
+                </thead>
+                <tbody id="dataTable" class="divide-y divide-gray-200">
+                    <!-- 載入中動畫 -->
+                    <tr id="loadingRow">
+                        <td colspan="10" class="px-6 py-10 text-center text-gray-500">
+                            <div class="flex flex-col items-center justify-center">
+                                <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-10 w-10 mb-3"></div>
+                                <p>正在自 Yahoo 股市獲取最新數據並計算 KD 值...</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-4 text-xs text-gray-400">
+            * 數據來源：Yahoo Finance 歷史報價 API。KD 預設採 9 日計算參數。
+        </div>
+    </div>
+
+    <script>
+        const targets = [
+            { category: '大盤', name: '加權指數', symbol: '^TWII', apiSymbol: '^TWII', step: 1 },
+            { category: '國際市值型 ETF', name: '元大 S&P500', symbol: '00646', apiSymbol: '00646.TW', step: 2 },
+            { category: '國際市值型 ETF', name: '富邦歐洲', symbol: '00709', apiSymbol: '00709.TW', step: 2 },
+            { category: '國際市值型 ETF', name: '元大日經', symbol: '00661', apiSymbol: '00661.TW', step: 2 },
+            { category: '國際市值型 ETF', name: '國泰新興市場', symbol: '00736', apiSymbol: '00736.TW', step: 2 },
+            { category: '美債券 ETF', name: '元大美債1-3年', symbol: '00719B', apiSymbol: '00719B.TWO', step: 3 },
+            { category: '美債券 ETF', name: '國泰US短期公債', symbol: '00865B', apiSymbol: '00865B.TW', step: 3 },
+            { category: '短線操作（個股）', name: '台積電', symbol: '2330', apiSymbol: '2330.TW', step: 4 },
+            { category: '短線操作（個股）', name: '鴻海', symbol: '2317', apiSymbol: '2317.TW', step: 4 },
+            { category: '短線操作（個股）', name: '廣達', symbol: '2382', apiSymbol: '2382.TW', step: 4 },
+            { category: '短線操作（個股）', name: '緯創', symbol: '3231', apiSymbol: '3231.TW', step: 4 },
+            { category: '短線操作（個股）', name: '茂順', symbol: '9942', apiSymbol: '9942.TW', step: 4 },
+        ];
+
+        // KD 計算函數 (9日)
+        function calculateKD(highs, lows, closes, period = 9) {
+            let k = 50, d = 50;
+            let result = [];
+
+            for (let i = 0; i < closes.length; i++) {
+                if (i < period - 1 || closes[i] === null) {
+                    result.push({ k: 50, d: 50 });
+                    continue;
+                }
+
+                let currentHighs = highs.slice(i - period + 1, i + 1).filter(v => v !== null);
+                let currentLows = lows.slice(i - period + 1, i + 1).filter(v => v !== null);
+                
+                if (currentHighs.length === 0 || currentLows.length === 0) {
+                    result.push({ k: k, d: d });
+                    continue;
+                }
+
+                let hh = Math.max(...currentHighs);
+                let ll = Math.min(...currentLows);
+                let close = closes[i];
+
+                let rsv = (hh === ll) ? k : ((close - ll) / (hh - ll)) * 100;
+                k = (2 / 3) * k + (1 / 3) * rsv;
+                d = (2 / 3) * d + (1 / 3) * k;
+
+                result.push({ k: k, d: d });
+            }
+            return result;
+        }
+
+        // 判斷邏輯
+        function analyzeData(step, k, kdCross) {
+            let location = '中性';
+            if (k < 20) location = '低點';
+            if (k > 80) location = '高點';
+
+            let advice = '觀望';
+            
+            switch(step) {
+                case 1:
+                    if (k < 20) advice = '買進台灣市值型 ETF';
+                    else if (k > 80) advice = '賣出台灣市值型 ETF';
+                    break;
+                case 2:
+                case 3:
+                    if (k < 20) advice = '可買進';
+                    else if (k > 80) advice = '可賣出';
+                    break;
+                case 4:
+                    if (k < 20) {
+                        advice = kdCross === '黃金交叉' ? '全買' : '部分買進(1/2資金)';
+                    } else if (k > 80) {
+                        advice = kdCross === '死亡交叉' ? '全賣' : '部分賣出(1/2股票)';
+                    }
+                    break;
+            }
+
+            return { location, advice };
+        }
+
+        // 記憶當前穩定運作的代理伺服器索引
+        let currentProxyIndex = 0;
+
+        async function fetchYahooData(symbol) {
+            // 【關鍵修正】: 改用「5分鐘級別」的快取鍵，取代原本毫秒級的隨機字串。
+            // 這樣免費代理伺服器就可以利用快取來回應，不再因為頻繁穿透請求而被 Yahoo 徹底封鎖 IP。
+            const cacheKey = Math.floor(new Date().getTime() / 300000); 
+            
+            const endpoints = [
+                `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=3mo&_=${cacheKey}`,
+                `https://query2.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=3mo&_=${cacheKey}`
+            ];
+            
+            // 代理伺服器清單
+            const proxyGenerators = [
+                { id: 'allorigins_get', build: (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}` },
+                { id: 'allorigins_raw', build: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
+                { id: 'codetabs', build: (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}` },
+                { id: 'corsproxy_io', build: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}` }
+            ];
+
+            let lastError;
+            
+            for (let endpoint of endpoints) {
+                for (let attempt = 0; attempt < proxyGenerators.length; attempt++) {
+                    // 確保優先使用上次成功運作的代理器 (Sticky Proxy 機制)
+                    let proxyIndex = (currentProxyIndex + attempt) % proxyGenerators.length;
+                    let proxy = proxyGenerators[proxyIndex];
+                    let proxyUrl = proxy.build(endpoint);
+                    
+                    try {
+                        const controller = new AbortController();
+                        // 【關鍵修正】: 將連線超時從 12 秒延長至 18 秒，以容忍免費代理伺服器的冷啟動延遲。
+                        const timeoutId = setTimeout(() => controller.abort(), 18000);
+                        
+                        let response;
+                        try {
+                            response = await fetch(proxyUrl, { 
+                                signal: controller.signal,
+                                headers: { 'Accept': 'application/json' },
+                                cache: 'no-store' // 確保瀏覽器不快取，交由代理伺服器本身處理快取
+                            });
+                        } catch (fetchErr) {
+                            // 捕捉 Failed to fetch (瀏覽器拒絕連線或 DNS 失敗)
+                            throw new Error(`NETWORK_ERROR (${fetchErr.name || fetchErr.message})`);
+                        } finally {
+                            clearTimeout(timeoutId);
+                        }
+                        
+                        if (response.status === 404) throw new Error("NOT_FOUND");
+                        
+                        let text = await response.text();
+                        
+                        // 針對 allorigins /get 的特例解析，安全提取 contents
+                        if (proxy.id === 'allorigins_get') {
+                            let jsonWrap;
+                            try { 
+                                jsonWrap = JSON.parse(text); 
+                            } catch (e) { 
+                                throw new Error("INVALID_PROXY_JSON"); 
+                            }
+                            if (jsonWrap.status && jsonWrap.status.http_code === 404) throw new Error("NOT_FOUND");
+                            text = jsonWrap.contents || "";
+                        }
+                        
+                        // 過濾各種非預期的純文字錯誤或是 HTML (代表被阻擋或 Rate Limit)
+                        if (!text || text.trim().startsWith('<') || text.includes('Too Many Requests') || text.startsWith('Edge:')) {
+                            throw new Error("PROXY_BLOCKED_OR_RATE_LIMIT");
+                        }
+                        
+                        let data;
+                        try {
+                            data = JSON.parse(text);
+                        } catch (e) {
+                            throw new Error("INVALID_YAHOO_JSON");
+                        }
+                        
+                        if (data && data.chart && data.chart.result) {
+                            // 成功！將此代理設為首選，下次直接從它開始
+                            currentProxyIndex = proxyIndex;
+                            return data;
+                        } else {
+                            throw new Error("INVALID_YAHOO_FORMAT");
+                        }
+                    } catch (e) {
+                        lastError = e;
+                        console.warn(`[嘗試 ${proxy.id} 失敗]: ${e.message}`);
+                        
+                        if (e.message === "NOT_FOUND") {
+                            throw e; // 標的真的不存在，直接拋出不浪費時間嘗試其他代理
+                        }
+                        
+                        // 失敗後稍等 1.5 秒再試下一個代理，避免瞬間發出過多錯誤請求
+                        await new Promise(resolve => setTimeout(resolve, 1500));
+                    }
+                }
+            }
+            throw lastError || new Error("All endpoints and proxies failed");
+        }
+
+        async function fetchStockData(item) {
+            try {
+                let parsed;
+                try {
+                    parsed = await fetchYahooData(item.apiSymbol);
+                } catch (error) {
+                    if (error.message === "NOT_FOUND" && item.apiSymbol.includes('.TWO')) {
+                        parsed = await fetchYahooData(`${item.symbol}.TW`);
+                    } else {
+                        throw error;
+                    }
+                }
+
+                const result = parsed.chart.result[0];
+                const quotes = result.indicators.quote[0];
+                
+                // 取得最新股價
+                const validCloses = quotes.close.filter(v => v !== null);
+                const currentPrice = validCloses.length > 0 ? validCloses[validCloses.length - 1] : 'N/A';
+                const formattedPrice = currentPrice !== 'N/A' ? currentPrice.toLocaleString('en-US', {maximumFractionDigits: 2}) : 'N/A';
+
+                const kdData = calculateKD(quotes.high, quotes.low, quotes.close);
+                const last = kdData[kdData.length - 1];
+                const prev = kdData[kdData.length - 2];
+
+                let kVal = last.k;
+                let kdCross = '無';
+                let remark = '';
+                
+                if (item.step !== 1) { 
+                    // 近似判斷法邏輯
+                    if (prev) {
+                        const kUp = last.k > prev.k;
+                        const kDown = last.k < prev.k;
+                        const dDownOrFlat = last.d <= prev.d;
+                        const dUpOrFlat = last.d >= prev.d;
+
+                        if (last.k > last.d && kUp && dDownOrFlat) {
+                            kdCross = '黃金交叉';
+                        } else if (last.k < last.d && kDown && dUpOrFlat) {
+                            kdCross = '死亡交叉';
+                        }
+                    }
+                    remark = '採近似判斷';
+                } else {
+                    kdCross = '—';
+                }
+
+                const analysis = analyzeData(item.step, kVal, kdCross);
+                
+                // 取得目前時間戳
+                const now = new Date();
+                const updateTime = now.toLocaleString('zh-TW', { 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+
+                return {
+                    ...item,
+                    price: formattedPrice,
+                    kVal: kVal.toFixed(2),
+                    kdCross: kdCross,
+                    location: analysis.location,
+                    advice: analysis.advice,
+                    remark: remark,
+                    updateTime: updateTime,
+                    status: 'success'
+                };
+            } catch (error) {
+                // 將 console.error 改為 console.warn 以免造成不必要的紅字恐慌
+                console.warn(`獲取 ${item.symbol} 失敗:`, error.message || error);
+                
+                // 取得目前時間戳
+                const now = new Date();
+                const updateTime = now.toLocaleString('zh-TW', { 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+                
+                return {
+                    ...item,
+                    price: 'N/A',
+                    kVal: 'N/A',
+                    kdCross: 'N/A',
+                    location: 'N/A',
+                    advice: '請你自行查詢',
+                    remark: '網路或伺服器阻擋',
+                    updateTime: updateTime,
+                    status: 'error'
+                };
+            }
+        }
+
+        function getYahooLink(symbol) {
+            const encodeSym = symbol === '^TWII' ? '%5ETWII' : symbol;
+            return `https://tw.stock.yahoo.com/quote/${encodeSym}/technical-analysis`;
+        }
+
+        function renderRow(row) {
+            let isBuy = row.advice.includes('買');
+            let isSell = row.advice.includes('賣');
+            
+            // 整列樣式處理
+            let rowClass = "hover:bg-gray-100 transition border-b border-gray-200 ";
+            let adviceOutput = `○ ${row.advice}`;
+
+            if (isBuy) {
+                rowClass += "font-bold text-gray-900";
+                adviceOutput = `🟢 ${row.advice}`;
+            } else if (isSell) {
+                rowClass += "font-bold text-gray-900";
+                adviceOutput = `🔴 ${row.advice}`;
+            } else {
+                rowClass += "text-gray-600";
+            }
+
+            const tr = document.createElement('tr');
+            tr.className = rowClass;
+            tr.id = `row-${row.symbol}`;
+
+            tr.innerHTML = `
+                <td class="px-4 py-3">${row.category}</td>
+                <td class="px-4 py-3">
+                    <a href="${getYahooLink(row.symbol)}" target="_blank" class="text-blue-600 hover:text-blue-800 hover:underline">
+                        ${row.name}
+                    </a>
+                </td>
+                <td class="px-4 py-3">${row.symbol}</td>
+                <td class="px-4 py-3">${row.price}</td>
+                <td class="px-4 py-3">${row.kVal}</td>
+                <td class="px-4 py-3">${row.kdCross}</td>
+                <td class="px-4 py-3">${row.location}</td>
+                <td class="px-4 py-3">${adviceOutput}</td>
+                <td class="px-4 py-3 text-gray-400 font-normal text-xs">${row.remark}</td>
+                <td class="px-4 py-3 text-gray-400 font-normal text-xs">${row.updateTime}</td>
+            `;
+            return tr;
+        }
+
+        async function loadData() {
+            const tableBody = document.getElementById('dataTable');
+            
+            // 清空表格，預先為每個stock建立佔位符
+            tableBody.innerHTML = '';
+            
+            // 建立佔位符行的映射
+            const placeholders = {};
+            targets.forEach((target) => {
+                const tr = document.createElement('tr');
+                tr.id = `row-${target.symbol}`;
+                tr.className = 'opacity-50';
+                tr.innerHTML = `
+                    <td colspan="10" class="px-6 py-3 text-center text-gray-400 text-sm">
+                        <div class="flex items-center justify-center gap-1">
+                            <div class="loader ease-linear rounded-full border-2 border-t-2 border-gray-300 h-4 w-4"></div>
+                            <span>載入中...</span>
+                        </div>
+                    </td>
+                `;
+                tableBody.appendChild(tr);
+                placeholders[target.symbol] = tr;
+            });
+
+            let loadedCount = 0;
+            const totalCount = targets.length;
+
+            // 並行取得所有股票資料
+            const promises = targets.map(async (target) => {
+                const res = await fetchStockData(target);
+                loadedCount++;
+                
+                // 用新內容替換對應的佔位符行
+                const newTr = renderRow(res);
+                const oldTr = placeholders[target.symbol];
+                oldTr.replaceWith(newTr);
+                
+                // 如果還有其他筆在抓取，更新或新增進度提示
+                if (loadedCount < totalCount) {
+                    // 移除舊的進度提示（如果存在）
+                    const oldStatus = document.getElementById('loadingStatus');
+                    if (oldStatus) {
+                        oldStatus.remove();
+                    }
+                    
+                    // 新增進度提示
+                    const statusRow = document.createElement('tr');
+                    statusRow.id = 'loadingStatus';
+                    statusRow.className = 'bg-blue-50 border-b border-gray-200';
+                    statusRow.innerHTML = `
+                        <td colspan="10" class="px-6 py-4 text-center text-gray-600">
+                            <div class="flex flex-col items-center justify-center">
+                                <div class="flex items-center gap-2">
+                                    <div class="loader ease-linear rounded-full border-2 border-t-2 border-blue-400 h-5 w-5"></div>
+                                    <p class="text-sm font-medium">已取得 <span class="text-blue-600 font-bold">${loadedCount}</span> 筆，尚餘 <span class="text-orange-600 font-bold">${totalCount - loadedCount}</span> 筆</p>
+                                </div>
+                            </div>
+                        </td>
+                    `;
+                    tableBody.appendChild(statusRow);
+                } else {
+                    // 全部完成，移除進度提示
+                    const statusRow = document.getElementById('loadingStatus');
+                    if (statusRow) {
+                        statusRow.remove();
+                    }
+                }
+                
+                return res;
+            });
+
+            await Promise.all(promises);
+        }
+
+        window.onload = loadData;
+    </script>
+</body>
+</html>
