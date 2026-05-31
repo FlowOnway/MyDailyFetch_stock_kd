@@ -594,12 +594,12 @@
                 `https://query2.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=3mo&_=${cacheKey}`
             ];
             
-            // 代理伺服器清單
+            // 代理伺服器清單（依可靠度排序；sticky proxy 機制會記住上次成功的）
             const proxyGenerators = [
-                { id: 'allorigins_get', build: (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}` },
+                { id: 'corsproxy_io',   build: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}` },
                 { id: 'allorigins_raw', build: (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}` },
-                { id: 'codetabs', build: (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}` },
-                { id: 'corsproxy_io', build: (url) => `https://corsproxy.io/?${encodeURIComponent(url)}` }
+                { id: 'allorigins_get', build: (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}` },
+                { id: 'codetabs',       build: (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}` },
             ];
 
             let lastError;
@@ -1126,5 +1126,6 @@
             };
             reader.readAsText(file);
         }
+    </script>
 </body>
 </html>
