@@ -1,0 +1,67 @@
+# VS Code 工作區與設定
+.vscode/
+*.code-workspace
+*.code-workspace.*
+
+# GitHub Copilot Skills
+.github/skills/
+skills/
+SKILL.md
+*.skill.md
+
+# Copilot 自訂指令（如果不想公開）
+.github/copilot-instructions.md
+.prompts/
+
+# Copilot 本地快取（絕對不要 commit）
+.copilot/
+.copilot-cache/
+
+
+# 依賴套件
+node_modules/
+venv/
+.venv/
+vendor/
+packages/
+
+# 建構產物
+dist/
+build/
+bin/
+obj/
+*.class
+*.pyc
+*.exe
+*.dll
+
+# 環境變數與敏感資料
+.env
+.env.local
+*.key
+*.pem
+
+# IDE 與編輯器
+.idea/
+*.iml
+.vscode/
+*.swp
+*~
+.DS_Store
+
+# 日誌與暫存檔
+*.log
+tmp/
+temporary/
+*.tmp
+*.cache
+
+# 測試與覆蓋率
+TestResults/
+coverage/
+.nyc_output/
+
+# 資料與模型
+dataset/
+output/
+models/
