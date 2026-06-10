@@ -1,4 +1,5 @@
 :root {
+    color-scheme: dark;
     --bg-base:      #0d1117;
     --bg-surface:   #161b22;
     --bg-elevated:  #1c2230;
@@ -70,7 +71,8 @@ body {
     display: inline-flex; align-items: center; gap: 5px;
     padding: 6px 13px; border-radius: 6px;
     font-size: 12.5px; font-weight: 500; line-height: 1;
-    cursor: pointer; transition: all 0.14s ease;
+    cursor: pointer; transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease, opacity 0.14s ease;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
     border: 1px solid transparent; white-space: nowrap;
     font-family: 'Noto Sans TC', sans-serif; text-decoration: none;
 }
@@ -99,6 +101,7 @@ body {
     border-color: rgba(210,153,34,0.3); cursor: pointer;
 }
 .btn-warning:hover { background: rgba(210,153,34,0.2); }
+.btn:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 2px; }
 
 /* ── Main content ── */
 .main-inner { max-width: 1280px; margin: 0 auto; padding: 22px 24px; }
@@ -110,7 +113,7 @@ body {
     margin-bottom: 5px;
 }
 .prog-label { font-size: 12px; color: var(--text-secondary); }
-.prog-pct   { font-size: 11px; color: var(--accent-blue); font-family: 'IBM Plex Mono', monospace; }
+.prog-pct   { font-size: 11px; color: var(--accent-blue); font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
 .prog-track { height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; }
 .prog-fill  {
     height: 100%;
@@ -176,9 +179,10 @@ body {
 
 /* ── K-bar ── */
 .k-cell   { display: flex; align-items: center; gap: 8px; }
+.k-label  { display: none; } /* shown only on mobile via media query */
 .k-track  { width: 56px; height: 4px; border-radius: 2px; background: var(--bg-elevated); overflow: hidden; flex-shrink: 0; }
 .k-fill   { height: 100%; border-radius: 2px; transition: width 0.9s cubic-bezier(0.22,0.61,0.36,1); }
-.k-val    { font-size: 12px; font-family: 'IBM Plex Mono', monospace; color: var(--text-secondary); min-width: 32px; }
+.k-val    { font-size: 12px; font-family: 'IBM Plex Mono', monospace; color: var(--text-secondary); min-width: 32px; font-variant-numeric: tabular-nums; }
 
 /* ── Code tag ── */
 .code-tag {
@@ -189,14 +193,15 @@ body {
 }
 
 /* ── Price ── */
-.price-val { font-family: 'IBM Plex Mono', monospace; font-size: 13.5px; font-weight: 500; }
+.price-val { font-family: 'IBM Plex Mono', monospace; font-size: 13.5px; font-weight: 500; font-variant-numeric: tabular-nums; }
 
 /* ── Stock name link ── */
 .stock-link {
     color: var(--text-primary); text-decoration: none; font-weight: 500; font-size: 13px;
-    transition: color 0.12s;
+    transition: color 0.12s; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
 }
 .stock-link:hover { color: var(--accent-blue); }
+.stock-link:focus-visible { color: var(--accent-blue); outline: 2px solid rgba(88,166,255,0.5); outline-offset: 3px; border-radius: 2px; }
 
 /* ── Timestamp ── */
 .ts { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--text-dim); }
@@ -274,10 +279,11 @@ body {
     display: flex; align-items: center; justify-content: center;
     border-radius: 6px; cursor: pointer;
     color: var(--text-secondary); font-size: 16px; line-height: 1;
-    transition: all 0.12s; border: 1px solid transparent; background: transparent;
+    transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease; border: 1px solid transparent; background: transparent;
 }
 .modal-close:hover { background: var(--bg-elevated); color: var(--text-primary); border-color: var(--border); }
-.modal-body { overflow-y: auto; flex: 1; }
+.modal-close:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 2px; }
+.modal-body { overflow-y: auto; flex: 1; overscroll-behavior: contain; }
 .modal-form {
     padding: 14px 22px; border-top: 1px solid var(--border);
     background: var(--bg-elevated); flex-shrink: 0;
@@ -323,3 +329,161 @@ body {
 .set-item-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .set-item-cat  { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
 .set-item-btns { display: flex; gap: 4px; flex-shrink: 0; }
+
+/* ════════════════════════════════════════
+   RWD — Responsive Web Design
+   ════════════════════════════════════════ */
+
+/* ── Tablet (≤ 900px) ── */
+@media (max-width: 900px) {
+    .header-inner { padding: 10px 16px; }
+    .main-inner   { padding: 14px 16px; }
+    .data-table thead th,
+    .data-table td { padding: 9px 12px; }
+}
+
+/* ── Mobile (≤ 640px) — Card layout ── */
+@media (max-width: 640px) {
+    /* ─ Header ─ */
+    .header-inner { padding: 9px 12px; gap: 8px; }
+    .header-title { font-size: 13.5px; }
+    .header-brand-icon { width: 26px; height: 26px; }
+    #lastUpdateBadge { display: none !important; }
+    /* Icon-only buttons in header */
+    .header-inner .btn .btn-label { display: none; }
+    .header-inner .btn { padding: 7px 10px; gap: 0; }
+    .header-inner .btn svg { width: 16px; height: 16px; }
+
+    /* ─ Main ─ */
+    .main-inner { padding: 10px 10px; }
+    .prog-label { font-size: 11px; }
+    .footer-note { font-size: 10.5px; flex-wrap: wrap; }
+
+    /* ─ Outer data-card: dissolve into background so individual cards float ─ */
+    .data-card { background: transparent; border: none; border-radius: 0; box-shadow: none; }
+    .table-scroll { overflow-x: visible; }
+
+    /* ─ Table → block so each row can become a card ─ */
+    .data-table,
+    .data-table tbody { display: block; min-width: unset; }
+    .data-table thead { display: none; }
+
+    /* ─ Category group header ─ */
+    .cat-group-row { display: block; }
+    .cat-group-row td {
+        display: block;
+        padding: 14px 4px 5px;
+        border-bottom: none;
+        background: transparent;
+    }
+
+    /* ─ Each stock row → decision card ─ */
+    .data-row {
+        display: grid;
+        /*  col1=auto(code/k-val)  col2=1fr(name/price/k-bar)  col3=auto(kd/k-val)  col4=auto(advice/loc/time) */
+        grid-template-columns: auto 1fr auto auto;
+        grid-template-rows: auto auto auto;
+        column-gap: 8px;
+        row-gap: 7px;
+        padding: 13px 14px;
+        margin-bottom: 8px;
+        border-radius: 10px;
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--border);   /* default neutral */
+        transition: background 0.12s;
+    }
+    .data-row:last-child { border-bottom: 1px solid var(--border); }
+    .data-row:hover { background: var(--bg-elevated); }
+
+    /* Left accent = instant buy/sell signal */
+    .data-row[data-advice="buy"]  { border-left-color: var(--accent-green); }
+    .data-row[data-advice="sell"] { border-left-color: var(--accent-red); }
+
+    /* All td: strip table defaults */
+    .data-row td {
+        display: block;
+        padding: 0;
+        white-space: nowrap;
+        vertical-align: middle;
+        border: none;
+    }
+
+    /* ─── Grid placement — visual order redesigned for decision scanning ─── */
+
+    /* ROW 1 ─ identity + primary signal */
+    /* Col 1-3: stock name link */
+    .data-row td:nth-child(1) { grid-column: 1 / 4; grid-row: 1; align-self: center; }
+    /* Col 4: action recommendation — the HERO */
+    .data-row td:nth-child(7) { grid-column: 4;     grid-row: 1; align-self: center; justify-self: end; }
+
+    /* ROW 2 ─ context layer */
+    .data-row td:nth-child(2) { grid-column: 1;     grid-row: 2; align-self: center; }   /* code tag */
+    .data-row td:nth-child(3) { grid-column: 2;     grid-row: 2; align-self: center; }   /* price */
+    .data-row td:nth-child(5) { grid-column: 3;     grid-row: 2; align-self: center; }   /* kd status badge */
+    .data-row td:nth-child(6) { grid-column: 4;     grid-row: 2; align-self: center; justify-self: end; } /* location badge */
+
+    /* ROW 3 ─ momentum bar + freshness */
+    /* K bar spans col 1-3 (full-width progress bar) */
+    .data-row td:nth-child(4) { grid-column: 1 / 4; grid-row: 3; align-self: center; }
+    /* Update time (right) */
+    .data-row td:nth-child(8) { grid-column: 4;     grid-row: 3; align-self: center; justify-self: end; }
+
+    /* K bar stretches to fill its grid cell */
+    .data-row td:nth-child(4) .k-cell  { width: 100%; }
+    .data-row td:nth-child(4) .k-track { flex: 1; width: auto; min-width: 0; height: 5px; }
+    .k-label {
+        display: inline-block;
+        font-size: 9.5px; font-weight: 700; letter-spacing: 0.06em;
+        color: var(--text-dim); text-transform: uppercase;
+        flex-shrink: 0;
+    }
+
+    /* ─ Typography tuning for cards ─ */
+    .stock-link            { font-size: 14px; font-weight: 600; }
+    .code-tag              { font-size: 10.5px; padding: 1px 6px; }
+    .price-val             { font-size: 13px; }
+    .badge                 { font-size: 10.5px; padding: 2px 7px; }
+    .adv-buy, .adv-sell    { font-size: 14px; font-weight: 700; }
+    .adv-hold, .adv-err    { font-size: 12.5px; }
+    .ts                    { font-size: 10px; }
+    .update-wrap           { align-items: flex-end; }
+
+    /* ─ Modal — bottom sheet ─ */
+    .modal-overlay { padding: 0; align-items: flex-end; }
+    .modal-box {
+        max-width: 100%;
+        max-height: 94vh;
+        border-radius: 14px 14px 0 0;
+        border-bottom: none;
+    }
+    .modal-head { padding: 13px 16px; }
+    .modal-body { padding: 0; }
+
+    /* ─ Settings form — stacked fields ─ */
+    .modal-form { padding: 12px 16px; }
+    .modal-form-row { flex-direction: column; align-items: stretch; gap: 10px; }
+    .field-group { width: 100%; }
+    .form-inp, .form-sel { width: 100% !important; }
+    #submitBtn, #cancelEditBtn { width: 100%; justify-content: center; }
+
+    /* ─ Modal footer ─ */
+    .modal-footer { padding: 10px 16px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); flex-wrap: wrap; gap: 8px; }
+    .modal-footer > div { flex: 1; display: flex; gap: 6px; }
+    .modal-footer .btn { flex: 1; justify-content: center; font-size: 12px; }
+    .modal-footer > .btn-primary { width: 100%; justify-content: center; }
+
+    /* ─ Settings list ─ */
+    .set-item { padding: 10px 16px; }
+    .set-item-info { gap: 7px; }
+    .set-item-name { font-size: 12.5px; }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+    .spinner  { animation: none; opacity: 0.6; }
+    .skel     { animation: none; background: var(--bg-elevated); }
+    .row-in   { animation: none; opacity: 1; transform: none; }
+    .k-fill   { transition: none; }
+    .prog-fill { transition: none; }
+}

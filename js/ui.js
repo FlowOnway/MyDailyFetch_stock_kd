@@ -53,10 +53,15 @@ export function renderRow(row) {
     const tr = document.createElement('tr');
     tr.className = 'data-row row-in';
     tr.id = `row-${row.symbol}`;
+    // data-advice: used by mobile CSS card left-border colour
+    const _isBuy  = row.status !== 'error' && row.advice.includes('買');
+    const _isSell = row.status !== 'error' && row.advice.includes('賣');
+    tr.dataset.advice = _isBuy ? 'buy' : _isSell ? 'sell' : 'hold';
 
     const kNum = parseFloat(row.kVal);
     const kCellHtml = !isNaN(kNum)
         ? `<div class="k-cell">
+               <span class="k-label">K</span>
                <div class="k-track"><div class="k-fill" style="width:${Math.min(100, Math.max(0, kNum)).toFixed(1)}%;background:${kBarColor(kNum)};"></div></div>
                <span class="k-val">${row.kVal}</span>
            </div>`
