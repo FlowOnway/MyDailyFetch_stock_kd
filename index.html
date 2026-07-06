@@ -88,8 +88,16 @@
         </div>
 
         <div class="footer-note">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            數據來源：Yahoo Finance API。KD 採 9 日計算參數，KD 狀態採最近交叉 + 目前 K/D 位置判斷。
+            <div class="footer-note-title">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span>重要聲明與數據說明：</span>
+            </div>
+            <ul class="footer-note-list">
+                <li><b>數據來源</b>：Yahoo Finance API (KD 採用 9 日計算參數)。</li>
+                <li><b>資料延遲</b>：Yahoo Finance 免費 API 對所有標的（指數、ETF、個股）均有約 <b>15–20 分鐘延遲</b>，與 Yahoo 股市網頁即時報價略有不同，僅供參考。</li>
+                <li><b>更新時間</b>：股價與 K 值數據時間以表格中的「<b>源</b>」時間為準。</li>
+                <li><b>KD 交叉</b>：採用前一日收盤數據進行判定，交易時間內狀態保持穩定、不跳動。</li>
+            </ul>
         </div>
     </main>
 

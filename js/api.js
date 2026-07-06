@@ -209,6 +209,26 @@ export async function fetchStockData(item, options = {}) {
                     break;
                 }
             }
+
+            // ── 現況一致性驗證 ──────────────────────────────────────────
+            // 過去 10 根內找到的交叉，必須和「目前的 K/D 關係」一致才有效。
+            // 情境：死亡交叉發生後，K 強力反彈重新穿越 D 上方 →
+            //       因為反彈時 K > 50 被高位過濾擋掉，黃金交叉未被記錄，
+            //       但死亡交叉訊號已實質失效，不應繼續顯示。
+            if (kdCross !== '無') {
+                let latestClosed = null;
+                for (let i = kdDataClosed.length - 1; i >= 0; i--) {
+                    if (Number.isFinite(kdDataClosed[i].k)) { latestClosed = kdDataClosed[i]; break; }
+                }
+                if (latestClosed) {
+                    const kNowAboveD = latestClosed.k > latestClosed.d + EPS;
+                    const kNowBelowD = latestClosed.k < latestClosed.d - EPS;
+                    // 死亡交叉但 K 已反向回到 D 上方 → 訊號失效
+                    if (kdCross === '死亡交叉' && kNowAboveD) kdCross = '無';
+                    // 黃金交叉但 K 已反向跌回 D 下方 → 訊號失效
+                    if (kdCross === '黃金交叉' && kNowBelowD) kdCross = '無';
+                }
+            }
         } else {
             kdCross = '—';
         }

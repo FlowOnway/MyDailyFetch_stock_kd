@@ -247,8 +247,17 @@ body {
 
 /* ── Footer note ── */
 .footer-note {
+    margin-top: 16px; font-size: 11px; color: var(--text-dim); line-height: 1.6;
+}
+.footer-note-title {
     display: flex; align-items: center; gap: 5px;
-    margin-top: 12px; font-size: 11px; color: var(--text-dim);
+    font-weight: 600; margin-bottom: 6px;
+}
+.footer-note-list {
+    margin: 0; padding-left: 18px;
+}
+.footer-note-list li {
+    margin-bottom: 4px;
 }
 
 /* ── Modal ── */
@@ -357,7 +366,7 @@ body {
     /* ─ Main ─ */
     .main-inner { padding: 10px 10px; }
     .prog-label { font-size: 11px; }
-    .footer-note { font-size: 10.5px; flex-wrap: wrap; }
+    .footer-note { font-size: 10.5px; }
 
     /* ─ Outer data-card: dissolve into background so individual cards float ─ */
     .data-card { background: transparent; border: none; border-radius: 0; box-shadow: none; }
