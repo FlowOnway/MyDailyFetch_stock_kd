@@ -260,6 +260,60 @@ body {
     margin-bottom: 4px;
 }
 
+/* ── Tooltip ── */
+.info-tooltip-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: help;
+    margin-left: 4px;
+    vertical-align: middle;
+    color: var(--text-dim);
+}
+.info-tooltip-wrapper:hover {
+    color: var(--accent-cyan);
+}
+.info-icon {
+    transition: color 0.2s ease;
+}
+.tooltip-content {
+    visibility: hidden;
+    opacity: 0;
+    width: 280px;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-normal);
+    text-align: left;
+    border-radius: 8px;
+    padding: 10px 12px;
+    position: absolute;
+    z-index: 100;
+    bottom: 130%;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+    font-size: 11px;
+    font-weight: normal;
+    line-height: 1.6;
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+    pointer-events: none;
+}
+.tooltip-content::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: var(--border) transparent transparent transparent;
+}
+.info-tooltip-wrapper:hover .tooltip-content {
+    visibility: visible;
+    opacity: 1;
+    transform: translateX(-50%) translateY(-2px);
+}
+
 /* ── Modal ── */
 .modal-overlay {
     position: fixed; inset: 0; z-index: 50;

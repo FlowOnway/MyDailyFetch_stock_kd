@@ -94,7 +94,19 @@
             </div>
             <ul class="footer-note-list">
                 <li><b>數據來源</b>：Yahoo Finance API (KD 採用 9 日計算參數)。</li>
-                <li><b>資料延遲</b>：Yahoo Finance 免費 API 對所有標的（指數、ETF、個股）均有約 <b>15–20 分鐘延遲</b>，與 Yahoo 股市網頁即時報價略有不同，僅供參考。</li>
+                <li>
+                    <b>資料延遲</b>：免費 API 對所有標的（含大盤）均有約 <b>15–20 分鐘延遲</b>
+                    <span class="info-tooltip-wrapper" aria-label="延遲機制說明">
+                        <svg class="info-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        <span class="tooltip-content">
+                            <b>滾動平移延遲機制：</b><br>
+                            每次重整時取得的都是「剛好 20 分鐘前」的數據。<br>
+                            • 13:30 重整 ➜ 顯示 13:10 的價格<br>
+                            • 13:31 重整 ➜ 顯示 13:11 的價格<br>
+                            因此數值每次重整都會變動，但始終與真實市場保持 20 分鐘固定時間差。
+                        </span>
+                    </span>
+                </li>
                 <li><b>更新時間</b>：股價與 K 值數據時間以表格中的「<b>源</b>」時間為準。</li>
                 <li><b>KD 交叉</b>：採用前一日收盤數據進行判定，交易時間內狀態保持穩定、不跳動。</li>
             </ul>
