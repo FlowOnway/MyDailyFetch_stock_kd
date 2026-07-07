@@ -2,7 +2,7 @@
 // main.js — 進入點：loadData + bootstrap + 全域函式綁定
 // ============================================================
 import { CATEGORY_DOT } from './config.js';
-import { targets } from './state.js';
+import { targets, toggleAttention } from './state.js';
 import { fetchStockData } from './api.js';
 import { renderRow, renderSkeletonRow, escapeHtml } from './ui.js';
 import {
@@ -108,3 +108,4 @@ window.submitTargetForm  = submitTargetForm;
 window.saveSettings      = saveSettings;
 window.exportTargets     = exportTargets;
 window.importTargets     = importTargets;
+window.toggleAttention   = toggleAttention;

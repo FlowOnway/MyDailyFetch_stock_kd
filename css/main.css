@@ -196,6 +196,46 @@ body {
 .price-val { font-family: 'IBM Plex Mono', monospace; font-size: 13.5px; font-weight: 500; font-variant-numeric: tabular-nums; }
 
 /* ── Stock name link ── */
+.name-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-star {
+    background: transparent;
+    border: none;
+    padding: 2px;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.15); /* 淡灰色，提示可點擊 */
+    transition: color 0.2s, transform 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.btn-star:hover {
+    color: rgba(255, 255, 255, 0.5);
+}
+.btn-star.star-active {
+    color: #e3b341; /* 金黃色 */
+    animation: starBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes starBounce {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.35); }
+    100% { transform: scale(1); }
+}
+
+/* 關注行的視覺強調 */
+.data-table tbody tr.data-row.row-attention {
+    background: linear-gradient(90deg, rgba(227, 179, 65, 0.05), transparent 30%);
+    border-left: 3px solid #e3b341;
+}
+.data-table tbody tr.data-row.row-attention td:first-child {
+    padding-left: 13px; /* 補償左側 border 佔用的空間 */
+}
+
 .stock-link {
     color: var(--text-primary); text-decoration: none; font-weight: 500; font-size: 13px;
     transition: color 0.12s; touch-action: manipulation; -webkit-tap-highlight-color: transparent;

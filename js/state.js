@@ -22,3 +22,13 @@ export function saveTargets() {
 export function setTargets(newTargets) {
     targets = newTargets;
 }
+
+export function toggleAttention(symbol) {
+    const target = targets.find(t => t.symbol === symbol);
+    if (target) {
+        target.isAttention = !target.isAttention;
+        saveTargets();
+        // 觸發重新渲染
+        document.dispatchEvent(new Event('stock:reload'));
+    }
+}

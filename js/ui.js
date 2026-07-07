@@ -76,8 +76,21 @@ export function renderRow(row) {
             <span class="ts update-fetch" style="display:${showFetchedLine ? 'inline' : 'none'};" title="本次抓取時間">抓 ${escapeHtml(fetchedAt)}</span>
         </div>`;
 
+    if (row.isAttention) {
+        tr.classList.add('row-attention');
+    }
+
     tr.innerHTML = `
-        <td><a href="${getYahooLink(row.apiSymbol)}" target="_blank" rel="noopener" class="stock-link">${escapeHtml(row.name)}</a></td>
+        <td>
+            <div class="name-cell">
+                <button class="btn-star ${row.isAttention ? 'star-active' : ''}" onclick="toggleAttention('${row.symbol}')" aria-label="標記關注">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="${row.isAttention ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                </button>
+                <a href="${getYahooLink(row.apiSymbol)}" target="_blank" rel="noopener" class="stock-link">${escapeHtml(row.name)}</a>
+            </div>
+        </td>
         <td><span class="code-tag">${escapeHtml(row.symbol)}</span></td>
         <td><span class="price-val" style="color:${row.status === 'error' ? 'var(--text-dim)' : 'var(--text-primary)'};">${escapeHtml(row.price)}</span></td>
         <td>${kCellHtml}</td>
