@@ -4,6 +4,9 @@
 import { PROXY_GENERATORS } from './config.js';
 import { calculateKD, analyzeData } from './indicators.js';
 
+// 版本標記：讓開發者在 Console 確認是否載入了最新版本
+console.log('[api.js] ✅ 已載入修正版 (KD 交叉 EPS 方向修正 v2)');
+
 // 記憶當前穩定運作的代理伺服器索引
 let currentProxyIndex = 0;
 
@@ -181,10 +184,10 @@ export async function fetchStockData(item, options = {}) {
 
         if (item.step !== 1) {
             // ── KD 交叉偵測：使用 kdDataClosed（收盤確認版）────────────────
-            // 優點：訊號在一整個交易日內保持穩定，不因盤中波動而忽現忽消
-            // 回溯 10 根 K 棒（約 2 週），讓訊號有足夠的有效期限
+            // 交叉偵測以「收盤」為準，確保訊號基準不受盤中雜訊干擾
+            // 回溯 4 根 K 棒（約 1 週），訊號保持新鮮、貼近近期走勢
             const EPS = 1e-6;
-            const lookbackBars = 10;
+            const lookbackBars = 4;
             const startIdx = Math.max(1, kdDataClosed.length - lookbackBars);
 
             for (let i = kdDataClosed.length - 1; i >= startIdx; i--) {
@@ -193,8 +196,8 @@ export async function fetchStockData(item, options = {}) {
                 if (!p || !c) continue;
                 if (!Number.isFinite(p.k) || !Number.isFinite(p.d) || !Number.isFinite(c.k) || !Number.isFinite(c.d)) continue;
 
-                const prevKBelowD = p.k < p.d + EPS;
-                const prevKAboveD = p.k > p.d - EPS;
+                const prevKBelowD = p.k < p.d - EPS;
+                const prevKAboveD = p.k > p.d + EPS;
                 const currKAboveD = c.k > c.d + EPS;
                 const currKBelowD = c.k < c.d - EPS;
 
@@ -210,22 +213,21 @@ export async function fetchStockData(item, options = {}) {
                 }
             }
 
-            // ── 現況一致性驗證 ──────────────────────────────────────────
-            // 過去 10 根內找到的交叉，必須和「目前的 K/D 關係」一致才有效。
-            // 情境：死亡交叉發生後，K 強力反彈重新穿越 D 上方 →
-            //       因為反彈時 K > 50 被高位過濾擋掉，黃金交叉未被記錄，
-            //       但死亡交叉訊號已實質失效，不應繼續顯示。
+            // ── 現況一致性驗證（使用盤中即時 K/D）──────────────────────────
+            // 以「盤中即時 K/D」判斷訊號是否仍然有效，而非最後一根收盤。
+            // 優點：若收盤後隔日盤中 K 已回到 D 上方，黃金交叉不會被誤清除。
+            // 注意：盤中訊號可能因股價波動而動態更新（此為預期行為）。
             if (kdCross !== '無') {
-                let latestClosed = null;
-                for (let i = kdDataClosed.length - 1; i >= 0; i--) {
-                    if (Number.isFinite(kdDataClosed[i].k)) { latestClosed = kdDataClosed[i]; break; }
+                let latestIntraday = null;
+                for (let i = kdData.length - 1; i >= 0; i--) {
+                    if (Number.isFinite(kdData[i].k)) { latestIntraday = kdData[i]; break; }
                 }
-                if (latestClosed) {
-                    const kNowAboveD = latestClosed.k > latestClosed.d + EPS;
-                    const kNowBelowD = latestClosed.k < latestClosed.d - EPS;
-                    // 死亡交叉但 K 已反向回到 D 上方 → 訊號失效
+                if (latestIntraday) {
+                    const kNowAboveD = latestIntraday.k > latestIntraday.d + EPS;
+                    const kNowBelowD = latestIntraday.k < latestIntraday.d - EPS;
+                    // 死亡交叉但盤中 K 已反向回到 D 上方 → 訊號失效
                     if (kdCross === '死亡交叉' && kNowAboveD) kdCross = '無';
-                    // 黃金交叉但 K 已反向跌回 D 下方 → 訊號失效
+                    // 黃金交叉但盤中 K 已反向跌回 D 下方 → 訊號失效
                     if (kdCross === '黃金交叉' && kNowBelowD) kdCross = '無';
                 }
             }
