@@ -4,7 +4,7 @@
 import { CATEGORY_DOT } from './config.js';
 import { targets, toggleAttention } from './state.js';
 import { fetchStockData } from './api.js';
-import { renderRow, renderSkeletonRow, escapeHtml, toggleMemoPanel, closeMemoDrawer } from './ui.js';
+import { renderRow, renderSkeletonRow, escapeHtml, toggleMemoPanel, closeMemoDrawer, switchMemoTab } from './ui.js';
 import {
     openSettings, closeSettings, renderSettingsList,
     editTarget, cancelEdit, deleteTarget, submitTargetForm,
@@ -111,4 +111,6 @@ window.importTargets     = importTargets;
 window.toggleAttention   = toggleAttention;
 window.toggleMemoPanel   = toggleMemoPanel;
 window.closeMemoDrawer   = closeMemoDrawer;
+window.switchMemoTab     = switchMemoTab;
+
 

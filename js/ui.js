@@ -2,6 +2,7 @@
 // ui.js — 渲染層（badge 產生、table row 等）
 // ============================================================
 import { getMemo, hasMemo, saveMemo } from './memo.js';
+// marked 已透過 index.html 的 <script> 標籤載入，可用 window.marked 存取
 
 export function escapeHtml(str) {
     return String(str)
@@ -132,6 +133,7 @@ export function renderSkeletonRow() {
 
 let currentDrawerSymbol = null;
 let originalMemoText    = '';
+let autoSaveTimeout     = null;
 
 function getOrCreateDrawer() {
     let drawer = document.getElementById('memoDrawer');
@@ -159,9 +161,26 @@ function getOrCreateDrawer() {
                         </span>
                         <span id="memoDrawerTimestamp" class="memo-timestamp"></span>
                     </div>
-                    <textarea id="memoDrawerTextarea" class="memo-textarea" placeholder="在這裡寫下研究筆記、目標價位、操作策略…" rows="12"></textarea>
+
+                    <div class="memo-drawer-tabs">
+                        <button id="memoTabPreview" class="memo-tab active" onclick="switchMemoTab('preview')">預覽</button>
+                        <button id="memoTabEdit" class="memo-tab" onclick="switchMemoTab('edit')">編輯</button>
+                    </div>
+
+                    <div id="memoEditContainer" class="memo-tab-container" style="display:none;">
+                        <textarea id="memoDrawerTextarea" class="memo-textarea" placeholder="在這裡寫下研究筆記、目標價位、操作策略… (支援 Markdown 語法)" rows="12"></textarea>
+                    </div>
+
+                    <div id="memoPreviewContainer" class="memo-tab-container">
+                        <div id="memoDrawerPreview" class="memo-preview-content" ondblclick="switchMemoTab('edit')" title="雙擊即可進行編輯"></div>
+                    </div>
+
                     <div class="memo-actions">
                         <button id="memoDrawerSaveBtn" class="btn btn-primary memo-save-btn">儲存筆記</button>
+                        <label class="memo-auto-save-wrap">
+                            <input type="checkbox" id="memoAutoSave" checked />
+                            <span>自動儲存</span>
+                        </label>
                         <span id="memoDrawerStatus" class="memo-save-status"></span>
                     </div>
                 </div>
@@ -170,6 +189,58 @@ function getOrCreateDrawer() {
         document.body.appendChild(drawer);
     }
     return drawer;
+}
+
+function handleTextareaInput(symbol) {
+    const autoSaveCb = document.getElementById('memoAutoSave');
+    if (!autoSaveCb || !autoSaveCb.checked) return;
+
+    if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
+
+    autoSaveTimeout = setTimeout(() => {
+        if (currentDrawerSymbol === symbol) {
+            saveMemoFromDrawer(symbol, true);
+        }
+    }, 800);
+}
+
+export function switchMemoTab(tabName) {
+    const tabEdit = document.getElementById('memoTabEdit');
+    const tabPreview = document.getElementById('memoTabPreview');
+    const editContainer = document.getElementById('memoEditContainer');
+    const previewContainer = document.getElementById('memoPreviewContainer');
+    const textarea = document.getElementById('memoDrawerTextarea');
+    const previewDiv = document.getElementById('memoDrawerPreview');
+
+    if (!tabEdit || !tabPreview || !editContainer || !previewContainer || !textarea || !previewDiv) return;
+
+    if (tabName === 'preview') {
+        tabEdit.classList.remove('active');
+        tabPreview.classList.add('active');
+        editContainer.style.display = 'none';
+        previewContainer.style.display = 'block';
+
+        // 渲染 Markdown
+        const markdownText = textarea.value;
+        if (markdownText.trim()) {
+            try {
+                const markedLib = window.marked;
+                if (!markedLib) throw new Error('marked 未載入');
+                previewDiv.innerHTML = markedLib.parse(markdownText);
+            } catch (err) {
+                console.error('Markdown 解析失敗:', err);
+                previewDiv.innerHTML = `<span style="color:var(--accent-red)">Markdown 預覽需要網路連線（請確認已連上網路再重新整理）</span>`;
+            }
+        } else {
+            previewDiv.innerHTML = `<em style="color:var(--text-dim); font-size:12.5px;">無筆記內容，請切換至「編輯」頁籤撰寫。</em>`;
+        }
+    } else {
+        tabEdit.classList.add('active');
+        tabPreview.classList.remove('active');
+        editContainer.style.display = 'block';
+        previewContainer.style.display = 'none';
+        textarea.focus();
+    }
 }
 
 export function toggleMemoPanel(symbol) {
@@ -206,6 +277,7 @@ export function openMemoDrawer(symbol) {
     const tsEl     = document.getElementById('memoDrawerTimestamp');
     const saveBtn  = document.getElementById('memoDrawerSaveBtn');
     const statusEl = document.getElementById('memoDrawerStatus');
+    const autoSaveCb = document.getElementById('memoAutoSave');
 
     if (nameEl)   nameEl.textContent   = stockName;
     if (symbolEl) symbolEl.textContent = symbol;
@@ -215,6 +287,23 @@ export function openMemoDrawer(symbol) {
     const memoText = memo ? memo.text : '';
     if (textarea) textarea.value = memoText;
     originalMemoText = memoText; // 紀錄原始文字，用於偵測未儲存變更
+
+    // 恢復使用者的自動儲存偏好
+    const autoSavePref = localStorage.getItem('memoAutoSavePref') !== 'false'; // 預設為 true
+    if (autoSaveCb) {
+        autoSaveCb.checked = autoSavePref;
+        autoSaveCb.onchange = () => {
+            localStorage.setItem('memoAutoSavePref', autoSaveCb.checked);
+        };
+    }
+
+    // 綁定輸入監聽
+    if (textarea) {
+        textarea.oninput = () => handleTextareaInput(symbol);
+    }
+
+    // 每次打開抽屜時，預設切換至「預覽」分頁
+    switchMemoTab('preview');
 
     // 更新最後儲存時間
     const pad = n => String(n).padStart(2, '0');
@@ -229,29 +318,36 @@ export function openMemoDrawer(symbol) {
 
     // 綁定儲存按鈕
     if (saveBtn) {
-        saveBtn.onclick = () => saveMemoFromDrawer(symbol);
+        saveBtn.onclick = () => saveMemoFromDrawer(symbol, false);
     }
 
     // 顯示 drawer
     drawer.classList.add('drawer-active');
     document.body.classList.add('drawer-open');
-
-    // 自動聚焦並移動游標至末尾
-    if (textarea) {
-        textarea.focus();
-        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-    }
 }
 
 export function closeMemoDrawer() {
     const textarea = document.getElementById('memoDrawerTextarea');
-    if (textarea) {
-        const currentVal = textarea.value.trim();
-        // 如果有修改且未儲存，提示使用者
+    const autoSaveCb = document.getElementById('memoAutoSave');
+
+    if (autoSaveTimeout) {
+        clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = null;
+    }
+
+    if (textarea && currentDrawerSymbol) {
+        const currentVal = textarea.value;
+        // 如果有修改
         if (currentVal !== originalMemoText) {
-            const confirmClose = confirm('您有尚未儲存的筆記修改，確定要直接關閉嗎？');
-            if (!confirmClose) {
-                return false; // 使用者選擇取消，保持開啟
+            if (autoSaveCb && autoSaveCb.checked) {
+                // 如果開啟自動儲存，關閉時立刻直接儲存
+                saveMemoFromDrawer(currentDrawerSymbol, true);
+            } else {
+                // 沒開啟自動儲存，提示使用者
+                const confirmClose = confirm('您有尚未儲存的筆記修改，確定要直接關閉嗎？');
+                if (!confirmClose) {
+                    return false; // 使用者選擇取消，保持開啟
+                }
             }
         }
     }
@@ -266,7 +362,7 @@ export function closeMemoDrawer() {
     return true; // 順利關閉
 }
 
-export function saveMemoFromDrawer(symbol) {
+export function saveMemoFromDrawer(symbol, isAuto = false) {
     const textarea = document.getElementById('memoDrawerTextarea');
     const statusEl = document.getElementById('memoDrawerStatus');
     const tsEl     = document.getElementById('memoDrawerTimestamp');
@@ -274,7 +370,7 @@ export function saveMemoFromDrawer(symbol) {
 
     const currentVal = textarea.value;
     saveMemo(symbol, currentVal);
-    originalMemoText = currentVal.trim(); // 儲存後更新基準，避免誤觸提示
+    originalMemoText = currentVal; // 儲存後更新基準點
 
     // 更新列表上的筆記按鈕高亮狀態
     const dataRow = document.getElementById(`row-${symbol}`);
@@ -294,13 +390,15 @@ export function saveMemoFromDrawer(symbol) {
     const stamp = `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     if (tsEl) tsEl.textContent = `最後儲存：${stamp}`;
 
-    // 成功提示
+    // 成功提示（防止多次儲存定時器交疊）
     if (statusEl) {
-        statusEl.textContent = '✓ 已儲存';
+        statusEl.textContent = isAuto ? '✓ 已自動儲存' : '✓ 已儲存';
         statusEl.classList.add('memo-status-show');
-        setTimeout(() => {
+
+        if (statusEl._timeoutId) clearTimeout(statusEl._timeoutId);
+        statusEl._timeoutId = setTimeout(() => {
             statusEl.classList.remove('memo-status-show');
-            setTimeout(() => { statusEl.textContent = ''; }, 300);
+            statusEl._timeoutId = setTimeout(() => { statusEl.textContent = ''; }, 300);
         }, 2000);
     }
 }
