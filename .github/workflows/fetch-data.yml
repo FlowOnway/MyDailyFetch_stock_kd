@@ -1,0 +1,37 @@
+name: Fetch Stock Snapshot
+
+on:
+  schedule:
+    # 台股盤中（09:00-13:30 台北時間 = 01:00-05:30 UTC）每 15 分鐘跑一次，週一到週五
+    - cron: '*/15 1-5 * * 1-5'
+  workflow_dispatch:  # 允許手動觸發
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fetch-snapshot
+  cancel-in-progress: true
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Fetch snapshot
+        run: node scripts/fetch-snapshot.mjs
+
+      - name: Commit snapshot if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/latest.json
+          git diff --staged --quiet || git commit -m "chore: 更新股票資料快照"
+          git push

@@ -73,7 +73,12 @@ export function renderRow(row) {
     const sourceTime = row.updateTime || '';
     const fetchedAt = row.fetchedAt || '';
     const showFetchedLine = fetchedAt && fetchedAt !== sourceTime;
+    // 排程這次抓取失敗、畫面顯示的是上一次成功的舊資料時，明確標示出來（避免使用者誤判為最新資料）
+    const staleNotice = row.snapshotStatus === 'stale'
+        ? `<span class="ts" style="color:var(--accent-orange,#d29922);display:block;" title="這次排程更新失敗，以下為上一次成功取得的資料">⚠ 更新失敗，顯示 ${escapeHtml(sourceTime)} 舊資料</span>`
+        : '';
     const updateCell = `<div class="update-wrap">
+            ${staleNotice}
             <span class="ts update-source" title="資料來源時間">源 ${escapeHtml(sourceTime)}</span>
             <span class="ts update-fetch" style="display:${showFetchedLine ? 'inline' : 'none'};" title="本次抓取時間">抓 ${escapeHtml(fetchedAt)}</span>
         </div>`;

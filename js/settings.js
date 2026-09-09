@@ -2,7 +2,7 @@
 // settings.js — 設定 Modal CRUD + 匯出/匯入
 // ============================================================
 import { CATEGORY_DOT, deriveStep, deriveApiSymbol } from './config.js';
-import { targets, setTargets, saveTargets } from './state.js';
+import { targets, setTargets, saveTargets, appSettings, setAppSettings, saveAppSettings } from './state.js';
 import { escapeHtml, escapeAttr } from './ui.js';
 import { fetchYahooData } from './api.js';
 import { getAllMemos, importMemos } from './memo.js';
@@ -112,6 +112,11 @@ export function openSettings() {
     bindAutoFillEvents();
     document.getElementById('settingsModal').style.display = 'flex';
     renderSettingsList();
+
+    const dataSourceSel = document.getElementById('settingDataSourceMode');
+    const refreshModeSel = document.getElementById('settingRefreshMode');
+    if (dataSourceSel) dataSourceSel.value = appSettings.dataSourceMode;
+    if (refreshModeSel) refreshModeSel.value = appSettings.refreshButtonMode;
 }
 
 export function closeSettings() {
@@ -226,6 +231,13 @@ export async function submitTargetForm() {
 }
 
 export function saveSettings() {
+    const dataSourceSel = document.getElementById('settingDataSourceMode');
+    const refreshModeSel = document.getElementById('settingRefreshMode');
+    setAppSettings({
+        dataSourceMode: dataSourceSel ? dataSourceSel.value : appSettings.dataSourceMode,
+        refreshButtonMode: refreshModeSel ? refreshModeSel.value : appSettings.refreshButtonMode,
+    });
+    saveAppSettings();
     saveTargets();
     closeSettings();
     requestReload();
