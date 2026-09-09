@@ -34,11 +34,15 @@ export const CATEGORY_DOT = {
 };
 
 // 代理伺服器清單（依可靠度排序；sticky proxy 機制會記住上次成功的）
-// 註：corsproxy.io 已改為付費 API Key 制（無 Key 一律回傳 401），故不再納入清單
+// 第一順位：自行部署的 Cloudflare Worker（穩定、免費、無 CORS 限制）
+// 部署完成後將下方的 PLACEHOLDER 換成你的 Worker URL，例如：
+//   https://yahoo-proxy.你的帳號.workers.dev
+// 其餘代理保留作備援，Worker 上線後幾乎不會用到
 export const PROXY_GENERATORS = [
-    { id: 'codetabs',       build: (url, cb) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}&cacheBust=${cb}` },
-    { id: 'allorigins_raw', build: (url, cb) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}&cacheBust=${cb}` },
-    { id: 'allorigins_get', build: (url, cb) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&cacheBust=${cb}` },
+    { id: 'cloudflare_worker', build: (url, cb) => `https://yahoo-fin-proxy.wilscmp.workers.dev?url=${encodeURIComponent(url)}&_=${cb}` },
+    { id: 'codetabs',          build: (url, cb) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}&cacheBust=${cb}` },
+    { id: 'allorigins_raw',    build: (url, cb) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}&cacheBust=${cb}` },
+    { id: 'allorigins_get',    build: (url, cb) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&cacheBust=${cb}` },
 ];
 
 export function deriveStep(category) {
@@ -48,15 +52,3 @@ export function deriveStep(category) {
 export function deriveApiSymbol(symbol) {
     return symbol.startsWith('^') ? symbol : `${symbol}.TW`;
 }
-
-// 排程（GitHub Actions）產生的資料快照路徑，前端優先讀這份，讀不到才 fallback 即時抓取
-export const SNAPSHOT_URL = './data/latest.json';
-
-export const APP_SETTINGS_KEY = 'stockAppSettings';
-
-// dataSourceMode: 'snapshot'（優先讀快照，預設）/ 'live'（每次都即時抓取，走代理）
-// refreshButtonMode: 手動按「重新整理」時的行為，'snapshot'（重讀快照）/ 'live'（強制即時抓取）
-export const DEFAULT_APP_SETTINGS = {
-    dataSourceMode: 'snapshot',
-    refreshButtonMode: 'snapshot',
-};

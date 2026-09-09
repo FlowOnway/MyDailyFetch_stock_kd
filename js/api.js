@@ -1,11 +1,11 @@
 // ============================================================
 // api.js — Yahoo Finance 資料獲取層
 // ============================================================
-import { PROXY_GENERATORS, SNAPSHOT_URL } from './config.js';
+import { PROXY_GENERATORS } from './config.js';
 import { calculateKD, analyzeData } from './indicators.js';
 
 // 版本標記：讓開發者在 Console 確認是否載入了最新版本
-console.log('[api.js] ✅ 已載入修正版 (KD 交叉 EPS 方向修正 v2)');
+console.log('[api.js] ✅ 已載入（Cloudflare Worker 版，快照機制已移除）');
 
 // 記憶當前穩定運作的代理伺服器索引
 let currentProxyIndex = 0;
@@ -21,7 +21,7 @@ function buildCacheKey(forceFresh = false) {
     return Math.floor(Date.now() / CACHE_WINDOW_MS);
 }
 
-// 匯出：Node 快照腳本（scripts/fetch-snapshot.mjs）也需要同一套時間格式
+// 匯出：供其他模組使用同一套時間格式
 export function formatLocalDate(date) {
     const pad = n => String(n).padStart(2, '0');
     return `${date.getMonth() + 1}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -120,7 +120,7 @@ export async function fetchYahooData(symbol, options = {}) {
     throw lastError || new Error('All proxies failed');
 }
 
-// 統一的錯誤資料列格式（瀏覽器即時抓取失敗、與 Node 快照腳本共用）
+// 統一的錯誤資料列格式
 export function buildErrorResult(item, fetchedAt, remark = '網路或伺服器阻擋') {
     return {
         ...item,
@@ -136,7 +136,7 @@ export function buildErrorResult(item, fetchedAt, remark = '網路或伺服器�
     };
 }
 
-// 純計算：把 Yahoo chart JSON 轉成畫面用的資料列（無網路呼叫，瀏覽器與 Node 快照腳本共用同一套邏輯）
+// 純計算：把 Yahoo chart JSON 轉成畫面用的資料列（無網路呼叫）
 export function buildAnalysisFromYahooData(item, parsed, fetchedAt) {
     const result = parsed.chart.result[0];
     const quotes = result.indicators.quote[0];
@@ -216,14 +216,13 @@ export function buildAnalysisFromYahooData(item, parsed, fetchedAt) {
 
         // ── 現況一致性驗證（使用盤中即時 K/D）──────────────────────────
         // 以「盤中即時 K/D」判斷訊號是否仍然有效，而非最後一根收盤。
-        // 優點：若收盤後隔日盤中 K 已回到 D 上方，黃金交叉不會被誤清除。
-        // 注意：盤中訊號可能因股價波動而動態更新（此為預期行為）。
         if (kdCross !== '無') {
             let latestIntraday = null;
             for (let i = kdData.length - 1; i >= 0; i--) {
                 if (Number.isFinite(kdData[i].k)) { latestIntraday = kdData[i]; break; }
             }
             if (latestIntraday) {
+                const EPS = 1e-6;
                 const kNowAboveD = latestIntraday.k > latestIntraday.d + EPS;
                 const kNowBelowD = latestIntraday.k < latestIntraday.d - EPS;
                 // 死亡交叉但盤中 K 已反向回到 D 上方 → 訊號失效
@@ -295,28 +294,3 @@ export async function fetchStockData(item, options = {}) {
         return buildErrorResult(item, fetchedAt);
     }
 }
-
-// 合併快照資料列與使用者本機自訂欄位：name/category/isAttention 等身分欄位以本機 target 為準，
-// 並用「目前」的 step 重新計算 location/advice（避免使用者事後改分類卻沿用舊建議）
-export function mergeSnapshotRow(target, snapshotRow) {
-    if (!snapshotRow) return null;
-    const merged = { ...snapshotRow, ...target };
-    const kVal = parseFloat(snapshotRow.kVal);
-    if (snapshotRow.status === 'success' && Number.isFinite(kVal)) {
-        const analysis = analyzeData(merged.step, kVal, snapshotRow.kdCross);
-        merged.location = analysis.location;
-        merged.advice = analysis.advice;
-    }
-    return merged;
-}
-
-// 讀取排程產生的資料快照（data/latest.json）；讀不到就丟出例外讓呼叫端 fallback 回即時抓取
-export async function fetchSnapshotData(forceFresh = false) {
-    const cacheBust = forceFresh ? `?_=${Date.now()}` : '';
-    const response = await fetch(`${SNAPSHOT_URL}${cacheBust}`, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`SNAPSHOT_HTTP_${response.status}`);
-    const data = await response.json();
-    if (!data || !Array.isArray(data.items)) throw new Error('SNAPSHOT_INVALID_FORMAT');
-    return data;
-}
-
