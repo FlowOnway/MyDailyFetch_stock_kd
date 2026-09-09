@@ -2,8 +2,8 @@
 // main.js — 進入點：loadData + bootstrap + 全域函式綁定
 // ============================================================
 import { CATEGORY_DOT } from './config.js';
-import { targets, toggleAttention } from './state.js';
-import { fetchStockData } from './api.js';
+import { targets, appSettings, toggleAttention } from './state.js';
+import { fetchStockData, fetchSnapshotData, mergeSnapshotRow } from './api.js';
 import { renderRow, renderSkeletonRow, escapeHtml, toggleMemoPanel, closeMemoDrawer, switchMemoTab } from './ui.js';
 import {
     openSettings, closeSettings, renderSettingsList,
@@ -20,6 +20,11 @@ async function loadData(forceFresh = false) {
     const refreshBtn = document.getElementById('refreshBtn');
     const lastBadge  = document.getElementById('lastUpdateBadge');
 
+    // 依設定決定這次要不要整批走即時抓取（手動刷新時看 refreshButtonMode，一般載入看 dataSourceMode）
+    const useLive = forceFresh
+        ? appSettings.refreshButtonMode === 'live' || appSettings.dataSourceMode === 'live'
+        : appSettings.dataSourceMode === 'live';
+
     // Disable refresh button while loading
     if (refreshBtn) refreshBtn.disabled = true;
     if (lastBadge)  lastBadge.style.display = 'none';
@@ -27,8 +32,22 @@ async function loadData(forceFresh = false) {
     // Show progress bar
     progWrap.style.display = 'block';
     progBar.style.width = '0%';
-    progLabel.textContent = forceFresh ? '正在強制更新最新資料…' : '正在取得資料…';
+    progLabel.textContent = useLive ? '正在即時抓取最新資料…' : '正在讀取資料快照…';
     progPct.textContent = '0%';
+
+    // 先嘗試讀取排程快照（快，不打外部代理）；讀不到就整批 fallback 走即時抓取
+    let snapshotMap = {};
+    let snapshotGeneratedAt = null;
+    if (!useLive) {
+        try {
+            const snapshot = await fetchSnapshotData(forceFresh);
+            snapshotGeneratedAt = snapshot.generatedAt;
+            snapshot.items.forEach(row => { snapshotMap[row.symbol] = row; });
+        } catch (e) {
+            console.warn('讀取資料快照失敗，改為即時抓取', e);
+            progLabel.textContent = '⚠ 快照讀取失敗，改為即時抓取…';
+        }
+    }
 
     // Group targets by category (preserve order)
     const grouped = {};
@@ -62,9 +81,12 @@ async function loadData(forceFresh = false) {
     let loadedCount = 0;
     const totalCount = targets.length;
 
-    // Fetch all in parallel; replace skeleton on completion
+    // 快照有資料的標的直接用（不打網路）；快照沒有的（例如使用者自訂新增的）才即時抓取
     const promises = targets.map(async (target) => {
-        const res = await fetchStockData(target, { forceFresh });
+        const snapshotRow = snapshotMap[target.symbol];
+        const res = snapshotRow
+            ? mergeSnapshotRow(target, snapshotRow)
+            : await fetchStockData(target, { forceFresh: true });
         loadedCount++;
 
         const pct = Math.round((loadedCount / totalCount) * 100);
@@ -88,13 +110,23 @@ async function loadData(forceFresh = false) {
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');
     const stamp = `${now.getMonth() + 1}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-    if (lastBadge) { lastBadge.textContent = `更新 ${stamp}`; lastBadge.style.display = 'inline-block'; }
+    if (lastBadge) {
+        let text = `更新 ${stamp}`;
+        if (snapshotGeneratedAt) {
+            const snapDate = new Date(snapshotGeneratedAt);
+            const snapStamp = `${snapDate.getMonth() + 1}/${pad(snapDate.getDate())} ${pad(snapDate.getHours())}:${pad(snapDate.getMinutes())}`;
+            text += `（快照 ${snapStamp}）`;
+        }
+        lastBadge.textContent = text;
+        lastBadge.style.display = 'inline-block';
+    }
 }
 
 // 監聽 settings.js 發出的重新載入事件（避免循環依賴）
 document.addEventListener('stock:reload', () => loadData(true));
 
-window.onload = () => loadData(true);
+// 首次開頁尊重使用者設定的預設模式，不強制即時抓取（避免一開頁就卡在代理逾時）
+window.onload = () => loadData(false);
 
 // ── 全域函式綁定（供 HTML onclick 使用）──────────────────────
 window.loadData          = loadData;
