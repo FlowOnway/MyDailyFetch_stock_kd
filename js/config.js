@@ -4,8 +4,18 @@
 
 export const STORAGE_KEY = 'stockTargets';
 
+export const INDEX_CATEGORY = '全球主要指數';
+
+// 歐洲採 STOXX Europe 600（Yahoo 代號 ^STOXX）；Yahoo 無 MSCI Europe 指數，故不備援
+export const DEFAULT_INDEX_TARGETS = [
+    { category: INDEX_CATEGORY, name: 'S&P 500 指數', symbol: '^GSPC', apiSymbol: '^GSPC', step: 0 },
+    { category: INDEX_CATEGORY, name: '台灣大盤(加權指數)', symbol: '^TWII', apiSymbol: '^TWII', step: 0 },
+    { category: INDEX_CATEGORY, name: '日經 225 指數', symbol: '^N225', apiSymbol: '^N225', step: 0 },
+    { category: INDEX_CATEGORY, name: 'STOXX Europe 600 指數', symbol: '^STOXX', apiSymbol: '^STOXX', step: 0 },
+];
+
 export const DEFAULT_TARGETS = [
-    { category: '台灣市值型 ETF', name: '台灣大盤(加權指數)', symbol: '^TWII', apiSymbol: '^TWII', step: 1 },
+    ...DEFAULT_INDEX_TARGETS,
     { category: '國際市值型 ETF', name: '元大 S&P500', symbol: '00646', apiSymbol: '00646.TW', step: 2 },
     { category: '國際市值型 ETF', name: '富邦歐洲', symbol: '00709', apiSymbol: '00709.TW', step: 2 },
     { category: '國際市值型 ETF', name: '元大日經', symbol: '00661', apiSymbol: '00661.TW', step: 2 },
@@ -20,6 +30,7 @@ export const DEFAULT_TARGETS = [
 ];
 
 export const CATEGORY_STEP_MAP = {
+    [INDEX_CATEGORY]: 0,
     '台灣市值型 ETF': 1,
     '國際市值型 ETF': 2,
     '美債券 ETF': 3,
@@ -27,6 +38,7 @@ export const CATEGORY_STEP_MAP = {
 };
 
 export const CATEGORY_DOT = {
+    [INDEX_CATEGORY]:   'dot-0',
     '台灣市值型 ETF':   'dot-1',
     '國際市值型 ETF':   'dot-2',
     '美債券 ETF':       'dot-3',
@@ -46,7 +58,7 @@ export const PROXY_GENERATORS = [
 ];
 
 export function deriveStep(category) {
-    return CATEGORY_STEP_MAP[category] || 4;
+    return CATEGORY_STEP_MAP[category] ?? 4;
 }
 
 export function deriveApiSymbol(symbol) {

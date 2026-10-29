@@ -274,7 +274,7 @@ export function importTargets(event) {
             for (const item of data) {
                 if (!item.symbol || !item.name || !item.category) throw new Error('缺少必要欄位（symbol、name、category）');
                 // 相容舊版匯出（補齊自動推導欄位）
-                if (!item.step)      item.step      = deriveStep(item.category);
+                if (item.step == null) item.step    = deriveStep(item.category);
                 if (!item.apiSymbol) item.apiSymbol = deriveApiSymbol(item.symbol);
             }
             setTargets(data);

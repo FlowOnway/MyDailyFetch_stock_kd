@@ -52,6 +52,10 @@ export function analyzeData(step, k, kdCross) {
     let advice = '觀望';
 
     switch (step) {
+        case 0:
+            if (k < 20) advice = kdCross === '黃金交叉' ? '可買進對應 ETF（黃金交叉）' : '低檔，可分批買進對應 ETF';
+            else if (k > 80) advice = kdCross === '死亡交叉' ? '可賣出對應 ETF（死亡交叉）' : '高檔，可分批賣出對應 ETF';
+            break;
         case 1:
             if (k < 20) advice = '買進台灣市值型 ETF';
             else if (k > 80) advice = '賣出台灣市值型 ETF';
