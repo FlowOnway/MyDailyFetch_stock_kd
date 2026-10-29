@@ -565,7 +565,10 @@ function afterDefaultsApplied(message) {
     renderCategoryList();
     populateCategorySelect();
     renderSettingsList();
-    document.getElementById('defaultsStatus').textContent = `${message}，請按「儲存並關閉」才會生效`;
+    saveTargets();
+    toggleDefaultsPanel();
+    alert(`✅ ${message}`);
+    requestReload();
 }
 
 export function mergeDefaults() {

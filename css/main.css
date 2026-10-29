@@ -407,6 +407,7 @@ body {
     background: var(--bg-surface);
     border: 1px solid var(--border);
     border-radius: 14px;
+    position: relative; min-width: 0;
     width: 100%; max-width: 660px; max-height: 88vh;
     display: flex; flex-direction: column;
     box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
@@ -432,6 +433,12 @@ body {
 .modal-form {
     padding: 14px 22px; border-top: 1px solid var(--border);
     background: var(--bg-elevated); flex-shrink: 0;
+}
+/* 浮在視窗底部：內容已填滿視窗高度時，一般流程的面板會被擠到畫面外 */
+#defaultsPanel {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 5;
+    border-radius: 0 0 14px 14px;
+    box-shadow: 0 -14px 32px rgba(0, 0, 0, 0.55);
 }
 .modal-form-label {
     font-size: 10px; font-weight: 700; color: var(--text-dim);
@@ -691,6 +698,7 @@ body {
 
     /* ─ Settings form — stacked fields ─ */
     .modal-form { padding: 12px 16px; }
+    #defaultsPanel { border-radius: 0; padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
     .modal-form-row { flex-direction: column; align-items: stretch; gap: 10px; }
     .field-group { width: 100%; }
     .form-inp, .form-sel { width: 100% !important; }
