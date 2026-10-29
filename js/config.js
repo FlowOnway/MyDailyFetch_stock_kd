@@ -29,21 +29,58 @@ export const DEFAULT_TARGETS = [
     { category: '短線操作（個股）', name: '茂順', symbol: '9942', apiSymbol: '9942.TW', step: 4 },
 ];
 
-export const CATEGORY_STEP_MAP = {
-    [INDEX_CATEGORY]: 0,
-    '台灣市值型 ETF': 1,
-    '國際市值型 ETF': 2,
-    '美債券 ETF': 3,
-    '短線操作（個股）': 4,
-};
+export const CATEGORIES_STORAGE_KEY = 'stockCategories';
 
-export const CATEGORY_DOT = {
-    [INDEX_CATEGORY]:   'dot-0',
-    '台灣市值型 ETF':   'dot-1',
-    '國際市值型 ETF':   'dot-2',
-    '美債券 ETF':       'dot-3',
-    '短線操作（個股）': 'dot-4',
-};
+// step = 建議規則編號（見 RULE_OPTIONS / indicators.js analyzeData）；dot = 圓點色 dot-0 ~ dot-4
+export const DEFAULT_CATEGORIES = [
+    { name: INDEX_CATEGORY,      step: 0, dot: 0 },
+    { name: '台灣市值型 ETF',    step: 1, dot: 1 },
+    { name: '國際市值型 ETF',    step: 2, dot: 2 },
+    { name: '美債券 ETF',        step: 3, dot: 3 },
+    { name: '短線操作（個股）',  step: 4, dot: 4 },
+];
+
+export const DOT_COUNT = 5;
+
+// 類別「建議規則」；說明文字同時用於頁尾與類別管理表單，需與 indicators.js analyzeData 保持一致
+// K 值介於 20～80 時所有規則一律顯示「觀望」
+export const RULE_OPTIONS = [
+    {
+        step: 0, label: '指數',
+        target: '大盤或指數（本身無法直接買賣，建議會指向「對應 ETF」）',
+        cross: '會偵測，且影響建議文字',
+        low: '黃金交叉→「可買進對應 ETF」；無交叉→「低檔，可分批買進對應 ETF」',
+        high: '死亡交叉→「可賣出對應 ETF」；無交叉→「高檔，可分批賣出對應 ETF」',
+    },
+    {
+        step: 1, label: '台灣市值型',
+        target: '台灣市值型 ETF（如 0050），直接買賣',
+        cross: '不偵測（「KD 狀態」欄固定顯示「無」）',
+        low: '「買進台灣市值型 ETF」',
+        high: '「賣出台灣市值型 ETF」',
+    },
+    {
+        step: 2, label: '國際市值型',
+        target: '國際型 ETF，直接買賣',
+        cross: '會偵測並顯示，但不影響建議',
+        low: '「可買進」',
+        high: '「可賣出」',
+    },
+    {
+        step: 3, label: '債券',
+        target: '債券 ETF，直接買賣',
+        cross: '會偵測並顯示，但不影響建議',
+        low: '「可買進」',
+        high: '「可賣出」',
+    },
+    {
+        step: 4, label: '短線個股',
+        target: '個股短線操作',
+        cross: '會偵測，且決定買賣比例',
+        low: '黃金交叉→「全買」；無交叉→「部分買進(1/2資金)」',
+        high: '死亡交叉→「全賣」；無交叉→「部分賣出(1/2股票)」',
+    },
+];
 
 // 代理伺服器清單（依可靠度排序；sticky proxy 機制會記住上次成功的）
 // 第一順位：自行部署的 Cloudflare Worker（穩定、免費、無 CORS 限制）
@@ -57,8 +94,9 @@ export const PROXY_GENERATORS = [
     { id: 'allorigins_get',    build: (url, cb) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}&cacheBust=${cb}` },
 ];
 
+// 僅供舊版匯入檔（無 step 且無 categories）依預設類別名稱推導
 export function deriveStep(category) {
-    return CATEGORY_STEP_MAP[category] ?? 4;
+    return DEFAULT_CATEGORIES.find(c => c.name === category)?.step ?? 4;
 }
 
 export function deriveApiSymbol(symbol) {

@@ -17,6 +17,20 @@ export function escapeAttr(str) {
     return String(str).replace(/"/g, '&quot;');
 }
 
+// 單一規則的明細行（頁尾 tooltip 與類別表單提示共用）
+export function ruleDetailHtml(r) {
+    return [['適用', r.target], ['KD 交叉', r.cross], ['K<20', r.low], ['K>80', r.high]]
+        .map(([k, v]) => `<span class="rule-line"><b>${k}</b>：${escapeHtml(v)}</span>`)
+        .join('');
+}
+
+export function ruleHelpHtml(rules) {
+    const blocks = rules
+        .map(r => `<div class="rule-block"><div class="rule-title">${escapeHtml(r.label)}</div>${ruleDetailHtml(r)}</div>`)
+        .join('');
+    return `${blocks}<div class="rule-foot">K 值介於 20～80 時，所有規則一律顯示「觀望」。</div>`;
+}
+
 export function getYahooLink(apiSymbol) {
     // apiSymbol 已帶交易所後綴，如 2317.TW、00719B.TWO、^TWII
     const encodeSym = encodeURIComponent(apiSymbol);
