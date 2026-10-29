@@ -26,6 +26,10 @@
                 <span id="lastUpdateBadge" style="display:none;"></span>
             </div>
             <div style="display:flex;gap:7px;align-items:center;">
+                <button id="accordionSwitch" type="button" class="switch" role="switch" aria-checked="false" title="開啟後一次只能展開一個類別" onclick="toggleAccordionMode()">
+                    <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+                    <span class="switch-label">單一展開</span>
+                </button>
                 <button id="refreshBtn" class="btn btn-ghost" onclick="loadData(true)" aria-label="重新整理">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>

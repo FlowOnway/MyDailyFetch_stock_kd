@@ -89,6 +89,22 @@ export function categoryDotClass(name) {
     return `dot-${getCategory(name)?.dot ?? 1}`;
 }
 
+// ── 類別摺疊（摺疊狀態不持久化，只記住「單一展開」開關）──
+const ACCORDION_KEY = 'stockAccordionMode';
+
+export const collapsedCats = new Set();
+
+function loadAccordionMode() {
+    try { return localStorage.getItem(ACCORDION_KEY) === '1'; } catch (e) { return false; }
+}
+
+export let accordionMode = loadAccordionMode();
+
+export function setAccordionMode(on) {
+    accordionMode = on;
+    try { localStorage.setItem(ACCORDION_KEY, on ? '1' : '0'); } catch (e) { /* ignore */ }
+}
+
 export function saveTargets() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(targets));
     localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(categories));

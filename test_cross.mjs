@@ -1,11 +1,13 @@
 // test_cross.mjs — 快速驗證 KD 交叉偵測邏輯是否正確
 // 用法：node test_cross.mjs
+// 注意：detectCross 是 js/api.js buildAnalysisFromYahooData 的獨立副本，修改該處邏輯時需同步更新
 
 const EPS = 1e-6;
 
-function detectCross(kdDataClosed) {
+// kdDataIntraday 對應 api.js 的盤中版 KD，用於確認訊號現況；未提供時退而使用收盤版
+function detectCross(kdDataClosed, kdDataIntraday = kdDataClosed) {
     let kdCross = '無';
-    const lookbackBars = 10;
+    const lookbackBars = 4;
     const startIdx = Math.max(1, kdDataClosed.length - lookbackBars);
 
     for (let i = kdDataClosed.length - 1; i >= startIdx; i--) {
@@ -26,13 +28,13 @@ function detectCross(kdDataClosed) {
 
     // 現況一致性驗證
     if (kdCross !== '無') {
-        let latestClosed = null;
-        for (let i = kdDataClosed.length - 1; i >= 0; i--) {
-            if (Number.isFinite(kdDataClosed[i].k)) { latestClosed = kdDataClosed[i]; break; }
+        let latest = null;
+        for (let i = kdDataIntraday.length - 1; i >= 0; i--) {
+            if (Number.isFinite(kdDataIntraday[i].k)) { latest = kdDataIntraday[i]; break; }
         }
-        if (latestClosed) {
-            const kNowAboveD = latestClosed.k > latestClosed.d + EPS;
-            const kNowBelowD = latestClosed.k < latestClosed.d - EPS;
+        if (latest) {
+            const kNowAboveD = latest.k > latest.d + EPS;
+            const kNowBelowD = latest.k < latest.d - EPS;
             if (kdCross === '死亡交叉' && kNowAboveD) kdCross = '無';
             if (kdCross === '黃金交叉' && kNowBelowD) kdCross = '無';
         }

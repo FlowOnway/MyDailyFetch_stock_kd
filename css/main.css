@@ -157,6 +157,35 @@ body {
     border-bottom: 1px solid var(--border);
 }
 .cat-group-inner { display: flex; align-items: center; gap: 7px; }
+.cat-group-row { cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
+.cat-group-row:hover td { color: var(--text-secondary); }
+.cat-group-row:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: -2px; }
+.cat-chevron { flex-shrink: 0; transition: transform 0.15s ease; }
+.cat-collapsed .cat-chevron { transform: rotate(-90deg); }
+.cat-hidden { display: none !important; }
+
+/* ── Header switch ── */
+.switch {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 5px 4px; background: none; border: none; cursor: pointer;
+    color: var(--text-secondary); font: 500 12.5px 'Noto Sans TC', sans-serif;
+    white-space: nowrap; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.switch:hover { color: var(--text-primary); }
+.switch:focus-visible { outline: 2px solid var(--accent-blue); outline-offset: 2px; border-radius: 6px; }
+.switch-track {
+    position: relative; width: 30px; height: 17px; flex-shrink: 0;
+    background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 20px;
+    transition: background-color 0.14s ease, border-color 0.14s ease;
+}
+.switch-thumb {
+    position: absolute; top: 2px; left: 2px; width: 11px; height: 11px;
+    background: var(--text-dim); border-radius: 50%;
+    transition: transform 0.14s ease, background-color 0.14s ease;
+}
+.switch[aria-checked="true"] { color: var(--text-primary); }
+.switch[aria-checked="true"] .switch-track { background: rgba(88,166,255,0.2); border-color: var(--accent-blue); }
+.switch[aria-checked="true"] .switch-thumb { transform: translateX(13px); background: var(--accent-blue); }
 
 /* ── Badges ── */
 .badge {
@@ -528,6 +557,7 @@ body {
     .header-inner .btn .btn-label { display: none; }
     .header-inner .btn { padding: 7px 10px; gap: 0; }
     .header-inner .btn svg { width: 16px; height: 16px; }
+    .switch-label { display: none; }
 
     /* ─ Main ─ */
     .main-inner { padding: 10px 10px; }
@@ -1114,6 +1144,7 @@ body.drawer-open {
     .skel     { animation: none; background: var(--bg-elevated); }
     .row-in   { animation: none; opacity: 1; transform: none; }
     .k-fill   { transition: none; }
+    .cat-chevron, .switch-track, .switch-thumb { transition: none; }
     .prog-fill { transition: none; }
     .memo-drawer-backdrop { transition: none; }
     .memo-drawer-content { transition: none; }

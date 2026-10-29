@@ -1,8 +1,5 @@
 {
   "name": "dailyfetch-stock-kd",
   "private": true,
-  "type": "module",
-  "scripts": {
-    "fetch-snapshot": "node scripts/fetch-snapshot.mjs"
-  }
+  "type": "module"
 }
