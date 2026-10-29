@@ -12,6 +12,7 @@ import {
     deleteCategory, confirmDeleteCategory, cancelDeleteCategory,
     switchSettingsTab, addTargetToCategory,
     saveSettings, exportTargets, importTargets,
+    toggleDefaultsPanel, mergeDefaults, replaceWithDefaults,
 } from './settings.js';
 
 // 依 collapsedCats 同步所有標題列與資料列的顯示狀態
@@ -209,3 +210,6 @@ window.toggleMemoPanel   = toggleMemoPanel;
 window.closeMemoDrawer   = closeMemoDrawer;
 window.switchMemoTab     = switchMemoTab;
 window.toggleAccordionMode = toggleAccordionMode;
+window.toggleDefaultsPanel = toggleDefaultsPanel;
+window.mergeDefaults     = mergeDefaults;
+window.replaceWithDefaults = replaceWithDefaults;
