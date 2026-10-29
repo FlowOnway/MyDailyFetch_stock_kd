@@ -34,7 +34,7 @@ npx serve .
 
 瀏覽器直接呼叫 Yahoo Finance 會被 CORS 擋下，因此請求會經過代理，順序見 [js/config.js](js/config.js) 的 `PROXY_GENERATORS`：
 
-1. 自行部署的 Cloudflare Worker（[cloudflare-worker/worker.js](cloudflare-worker/worker.js)，僅轉發 `yahoo.com`）。
+1. 自行部署的 Cloudflare Worker（[cloudflare-worker/worker.js](cloudflare-worker/worker.js)，僅轉發 Yahoo Finance 的 `query1`／`query2.finance.yahoo.com`）。
 2. 公開 CORS 代理（codetabs、allorigins）作為備援，不穩定，可能隨時失效。
 
 代理回傳 401/403 時，該代理會在本次瀏覽中被略過。
