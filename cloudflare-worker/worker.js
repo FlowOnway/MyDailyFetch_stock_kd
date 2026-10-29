@@ -4,6 +4,9 @@
 // 部署後取得 URL（如 https://yahoo-proxy.你的帳號.workers.dev），填入 js/config.js
 // ============================================================
 
+// 精確比對主機名稱；endsWith('yahoo.com') 會放行 evilyahoo.com
+const ALLOWED_HOSTS = ['query1.finance.yahoo.com', 'query2.finance.yahoo.com'];
+
 export default {
   async fetch(request) {
     // 只處理 GET 請求
@@ -26,12 +29,12 @@ export default {
       return new Response('Invalid URL', { status: 400 });
     }
 
-    if (!targetUrl.hostname.endsWith('yahoo.com')) {
-      return new Response('Forbidden: only yahoo.com is allowed', { status: 403 });
+    if (targetUrl.protocol !== 'https:' || !ALLOWED_HOSTS.includes(targetUrl.hostname)) {
+      return new Response('Forbidden: only Yahoo Finance chart API is allowed', { status: 403 });
     }
 
     try {
-      const res = await fetch(target, {
+      const res = await fetch(targetUrl.toString(), {
         headers: {
           'Accept': 'application/json',
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
