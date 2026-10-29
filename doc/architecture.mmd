@@ -1,29 +1,39 @@
 flowchart TB
-    index["index.html | 前端入口&儀表板"]
-    loadBtn["loadData | 重新整理按鈕"]
-    calcLoop["stock loop | 循環 12 支標的"]
-    fetchStockData["fetchStockData | 數據獲取"]
-    fetchYahooData["fetchYahooData | Yahoo API 代理"]
-    proxyService["Proxy | 代理服務轉發"]
-    yahooAPI["Yahoo Finance API | 實時行情源"]
-    kdCalc["calculateKD | 計算 KD 指標"]
-    analyzeLogic["analyzeData | 投資分析"]
-    tableRender["dataTable | 表格渲染"]
-    stockData["targets | 股票列表配置"]
-    
-    index -->|加載完成 onload| loadBtn
-    loadBtn -->|user click 觸發| calcLoop
-    calcLoop -->|遍歷每支| fetchStockData
-    stockData -->|傳遞標的| fetchStockData
-    fetchStockData -->|調用| fetchYahooData
-    fetchYahooData -->|發送請求 encodeURIComponent| proxyService
-    proxyService -->|轉發跨域 CORS| yahooAPI
-    yahooAPI -->|回傳 JSON 行情| fetchYahooData
-    fetchYahooData -->|解析 chart.result| fetchStockData
-    fetchStockData -->|傳遞 highs/lows/closes| kdCalc
-    kdCalc -->|計算 K 值 D 值| fetchStockData
-    fetchStockData -->|判斷 K 值 KD 交叉| analyzeLogic
-    analyzeLogic -->|決策 買進/賣出/觀望| fetchStockData
-    fetchStockData -->|累積結果 results| calcLoop
-    calcLoop -->|2秒 sleep 待完成| tableRender
-    tableRender -->|DOM createElement 渲染| index
+    index["index.html | 頁面與設定視窗"]
+    mainLoad["main.js loadData | 載入與重新整理"]
+    state["state.js | targets / categories（localStorage）"]
+    skeleton["依類別分組，先渲染 skeleton 列"]
+    fetchStockData["api.js fetchStockData | 每個標的並行抓取"]
+    fetchYahooData["api.js fetchYahooData | 依序嘗試代理"]
+    worker["Cloudflare Worker | 優先代理"]
+    fallbackProxy["codetabs / allorigins | 備援代理"]
+    yahooAPI["Yahoo Finance chart API"]
+    suffixRetry[".TW ↔ .TWO 後綴互換重試"]
+    buildAnalysis["buildAnalysisFromYahooData"]
+    calcKD["indicators.js calculateKD | 盤中版與收盤版"]
+    crossDetect["收盤版偵測近 4 根交叉，盤中版確認有效"]
+    analyze["indicators.js analyzeData | 依類別規則給建議"]
+    renderRow["ui.js renderRow | 取代 skeleton 列"]
+    collapse["applyCollapse | 套用類別摺疊"]
+    settings["settings.js | 標的與類別管理、匯入匯出、排序"]
+
+    index -->|window.onload| mainLoad
+    state -->|targets / categories| mainLoad
+    mainLoad --> skeleton
+    skeleton -->|Promise.all| fetchStockData
+    fetchStockData --> fetchYahooData
+    fetchYahooData -->|第一順位| worker
+    fetchYahooData -.->|失敗時| fallbackProxy
+    worker --> yahooAPI
+    fallbackProxy --> yahooAPI
+    yahooAPI -->|chart JSON| fetchYahooData
+    fetchYahooData -->|NOT_FOUND| suffixRetry
+    suffixRetry --> fetchYahooData
+    fetchYahooData -->|highs / lows / closes / meta| buildAnalysis
+    buildAnalysis --> calcKD
+    calcKD --> crossDetect
+    crossDetect --> analyze
+    analyze -->|買進 / 賣出 / 觀望| renderRow
+    renderRow --> collapse
+    collapse --> index
+    settings -->|儲存後觸發 stock:reload| mainLoad
