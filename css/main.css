@@ -586,7 +586,7 @@ body {
     .data-row {
         display: grid;
         /*  col1=auto(code/k-val)  col2=1fr(name/price/k-bar)  col3=auto(kd/k-val)  col4=auto(advice/loc/time) */
-        grid-template-columns: auto 1fr auto auto;
+        grid-template-columns: auto 1fr auto fit-content(48%);
         grid-template-rows: auto auto auto;
         column-gap: 8px;
         row-gap: 7px;
@@ -633,6 +633,11 @@ body {
     .data-row td:nth-child(4) { grid-column: 1 / 4; grid-row: 3; align-self: center; }
     /* Update time (right) */
     .data-row td:nth-child(8) { grid-column: 4;     grid-row: 3; align-self: center; justify-self: end; }
+
+    /* 建議文字過長時在欄內換行，避免蓋到標的名稱 */
+    .data-row td:nth-child(1) { min-width: 0; }
+    .data-row td:nth-child(7) { white-space: normal; min-width: 0; }
+    .data-row td:nth-child(7) .advice-cell { justify-content: flex-end; text-align: right; }
 
     /* K bar stretches to fill its grid cell */
     .data-row td:nth-child(4) .k-cell  { width: 100%; }
