@@ -1,7 +1,7 @@
 // ============================================================
 // settings.js — 設定 Modal CRUD + 匯出/匯入
 // ============================================================
-import { RULE_OPTIONS, DOT_COUNT, deriveStep, deriveApiSymbol } from './config.js';
+import { RULE_OPTIONS, DOT_COUNT, DEFAULT_TARGETS, DEFAULT_CATEGORIES, deriveStep, deriveApiSymbol } from './config.js';
 import {
     targets, setTargets, saveTargets,
     categories, setCategories, getCategory, withMissingCategories, parseCategories,
@@ -546,6 +546,57 @@ export function saveSettings() {
     saveTargets();
     closeSettings();
     requestReload();
+}
+
+// ── 預設標的（合併／取代）──────────────────────────────────
+
+const clone = (x) => JSON.parse(JSON.stringify(x));
+
+export function toggleDefaultsPanel() {
+    const panel = document.getElementById('defaultsPanel');
+    panel.hidden = !panel.hidden;
+    document.getElementById('defaultsStatus').textContent = '';
+}
+
+function afterDefaultsApplied(message) {
+    cancelEdit();
+    cancelCategoryEdit();
+    pendingDeleteCategory = null;
+    renderCategoryList();
+    populateCategorySelect();
+    renderSettingsList();
+    document.getElementById('defaultsStatus').textContent = `${message}，請按「儲存並關閉」才會生效`;
+}
+
+export function mergeDefaults() {
+    const have = new Set(targets.map(t => t.symbol));
+    const missing = DEFAULT_TARGETS.filter(t => !have.has(t.symbol));
+    if (missing.length === 0) {
+        document.getElementById('defaultsStatus').textContent = '目前已包含所有預設標的，沒有需要補上的項目';
+        return;
+    }
+
+    const nextCategories = categories.map(c => ({ ...c }));
+    for (const dc of DEFAULT_CATEGORIES) {
+        const needed = missing.some(t => t.category === dc.name);
+        if (needed && !nextCategories.some(c => c.name === dc.name)) nextCategories.push({ ...dc });
+    }
+
+    // 沿用使用者既有類別的建議規則，確保同一類別的 step 一致
+    const added = clone(missing).map((t) => {
+        const cat = nextCategories.find(c => c.name === t.category);
+        return cat ? { ...t, step: cat.step } : t;
+    });
+    setTargets([...targets, ...added]);
+    setCategories(nextCategories);
+    afterDefaultsApplied(`已補上 ${added.length} 檔預設標的`);
+}
+
+export function replaceWithDefaults() {
+    if (!confirm('這會以預設清單覆蓋目前所有標的與類別（筆記會保留，但星號標記與自訂排序會消失）。確定要取代嗎？')) return;
+    setTargets(clone(DEFAULT_TARGETS));
+    setCategories(clone(DEFAULT_CATEGORIES));
+    afterDefaultsApplied(`已改為預設清單（${DEFAULT_TARGETS.length} 檔）`);
 }
 
 export function exportTargets() {

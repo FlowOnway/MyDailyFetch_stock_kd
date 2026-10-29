@@ -215,6 +215,17 @@
             </div>
             </div>
 
+            <div id="defaultsPanel" class="modal-form" hidden>
+                <span class="modal-form-label">載入預設標的</span>
+                <div class="modal-form-row">
+                    <button class="btn btn-primary" onclick="mergeDefaults()">合併</button>
+                    <button class="btn btn-danger" onclick="replaceWithDefaults()">取代</button>
+                    <button class="btn btn-ghost" onclick="toggleDefaultsPanel()">取消</button>
+                </div>
+                <p class="field-hint"><b>合併</b>：只補上目前沒有的預設標的（連同需要的類別），保留你原本的清單。<b>取代</b>：以預設清單覆蓋目前所有標的與類別，筆記會保留。套用後請按「儲存並關閉」才會生效。</p>
+                <p id="defaultsStatus" class="field-hint" role="status"></p>
+            </div>
+
             <div class="modal-footer">
                 <div style="display:flex;gap:7px;">
                     <button class="btn btn-success" onclick="exportTargets()">
@@ -226,6 +237,7 @@
                         匯入備份
                         <input id="importFileInput" type="file" accept=".json" style="display:none;" onchange="importTargets(event)" />
                     </label>
+                    <button class="btn btn-ghost" onclick="toggleDefaultsPanel()">預設標的</button>
                 </div>
                 <button class="btn btn-primary" onclick="saveSettings()" style="padding:7px 20px;">儲存並關閉</button>
             </div>
