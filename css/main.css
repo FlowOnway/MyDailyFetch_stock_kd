@@ -15,6 +15,8 @@
     --accent-cyan:  #39c5cf;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* 不用 body：由 html 傳遞到 viewport，才不會破壞 sticky header */
+html { overflow-x: hidden; }
 body {
     background: var(--bg-base);
     color: var(--text-primary);
@@ -636,6 +638,21 @@ body {
 
     /* 建議文字過長時在欄內換行，避免蓋到標的名稱 */
     .data-row td:nth-child(1) { min-width: 0; }
+    .name-cell { min-width: 0; }
+    .stock-link { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+    /* 隱藏中的 tooltip 仍會擴大可捲動範圍：手機改為點開才顯示的底部提示 */
+    .tooltip-content, .tooltip-wide {
+        display: none;
+        position: fixed;
+        left: 12px; right: 12px; bottom: 12px;
+        width: auto; max-width: none;
+        transform: none;
+        z-index: 200;
+    }
+    .tooltip-content::after { display: none; }
+    .info-tooltip-wrapper:hover .tooltip-content,
+    .info-tooltip-wrapper:focus-within .tooltip-content { display: block; transform: none; }
     .data-row td:nth-child(7) { white-space: normal; min-width: 0; }
     .data-row td:nth-child(7) .advice-cell { justify-content: flex-end; text-align: right; }
 
@@ -664,11 +681,13 @@ body {
     .modal-box {
         max-width: 100%;
         max-height: 94vh;
+        max-height: 94dvh;
+        overflow-x: hidden;
         border-radius: 14px 14px 0 0;
         border-bottom: none;
     }
     .modal-head { padding: 13px 16px; }
-    .modal-body { padding: 0; }
+    .modal-body { padding: 0; overflow-x: hidden; }
 
     /* ─ Settings form — stacked fields ─ */
     .modal-form { padding: 12px 16px; }
@@ -683,8 +702,8 @@ body {
 
     /* ─ Modal footer ─ */
     .modal-footer { padding: 10px 16px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); flex-wrap: wrap; gap: 8px; }
-    .modal-footer > div { flex: 1; display: flex; gap: 6px; }
-    .modal-footer .btn { flex: 1; justify-content: center; font-size: 12px; }
+    .modal-footer > div { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; }
+    .modal-footer .btn { flex: 1 1 auto; justify-content: center; font-size: 12px; }
     .modal-footer > .btn-primary { width: 100%; justify-content: center; }
 
     /* ─ Settings list ─ */
