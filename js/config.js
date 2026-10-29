@@ -16,17 +16,31 @@ export const DEFAULT_INDEX_TARGETS = [
 
 export const DEFAULT_TARGETS = [
     ...DEFAULT_INDEX_TARGETS,
+    { category: '國際市值型 ETF', name: '復華 S&P 500 成長', symbol: '00924', apiSymbol: '00924.TW', step: 2 },
     { category: '國際市值型 ETF', name: '元大 S&P500', symbol: '00646', apiSymbol: '00646.TW', step: 2 },
-    { category: '國際市值型 ETF', name: '富邦歐洲', symbol: '00709', apiSymbol: '00709.TW', step: 2 },
-    { category: '國際市值型 ETF', name: '元大日經', symbol: '00661', apiSymbol: '00661.TW', step: 2 },
-    { category: '國際市值型 ETF', name: '國泰新興市場', symbol: '00736', apiSymbol: '00736.TW', step: 2 },
+    { category: '國際市值型 ETF', name: '國泰北美科技', symbol: '00770', apiSymbol: '00770.TW', step: 2 },
     { category: '美債券 ETF', name: '元大美債1-3年', symbol: '00719B', apiSymbol: '00719B.TWO', step: 3 },
     { category: '美債券 ETF', name: '國泰US短期公債', symbol: '00865B', apiSymbol: '00865B.TW', step: 3 },
     { category: '短線操作（個股）', name: '台積電', symbol: '2330', apiSymbol: '2330.TW', step: 4 },
     { category: '短線操作（個股）', name: '鴻海', symbol: '2317', apiSymbol: '2317.TW', step: 4 },
     { category: '短線操作（個股）', name: '廣達', symbol: '2382', apiSymbol: '2382.TW', step: 4 },
     { category: '短線操作（個股）', name: '緯創', symbol: '3231', apiSymbol: '3231.TW', step: 4 },
-    { category: '短線操作（個股）', name: '茂順', symbol: '9942', apiSymbol: '9942.TW', step: 4 },
+    { category: '其他-回本後賣出轉成ETF', name: 'Pegatron Corporation', symbol: '4938', apiSymbol: '4938.TW', step: 4 },
+    { category: '美債券 ETF', name: '中信美國公債0-1', symbol: '00864B', apiSymbol: '00864B.TWO', step: 3 },
+    { category: '其他-回本後賣出轉成ETF', name: 'Sinyi Realty Inc.', symbol: '9940', apiSymbol: '9940.TW', step: 4 },
+    { category: '其他-回本後賣出轉成ETF', name: '茂順', symbol: '9942', apiSymbol: '9942.TW', step: 4 },
+    { category: '其他-回本後賣出轉成ETF', name: 'Compal Electronics, Inc.', symbol: '2324', apiSymbol: '2324.TW', step: 4 },
+    { category: '短線操作（個股）', name: '國泰費城半導體', symbol: '00830', apiSymbol: '00830.TW', step: 4 },
+    { category: '國際市值型 ETF', name: '元大日經', symbol: '00661', apiSymbol: '00661.TW', step: 2 },
+    { category: '短線操作（個股）', name: '富邦台灣中小', symbol: '00733', apiSymbol: '00733.TW', step: 4 },
+    { category: '短線操作（個股）', name: '富世達', symbol: '6805', apiSymbol: '6805.TW', step: 4 },
+    { category: '國際市值型 ETF', name: '富邦歐洲', symbol: '00709', apiSymbol: '00709.TW', step: 2 },
+    { category: '台灣市值型 ETF', name: '元大台灣50', symbol: '0050', apiSymbol: '0050.TW', step: 1 },
+    { category: '台灣高股息 ETF', name: '元大高股息', symbol: '0056', apiSymbol: '0056.TW', step: 2 },
+    { category: '台灣市值型 ETF', name: '富邦台50', symbol: '006208', apiSymbol: '006208.TW', step: 1 },
+    { category: '台灣市值型 ETF', name: '(高息)群益台灣精選高息', symbol: '00919', apiSymbol: '00919.TW', step: 1 },
+    { category: '台灣高股息 ETF', name: '元大高息低波', symbol: '00713', apiSymbol: '00713.TW', step: 2 },
+    { category: '台灣高股息 ETF', name: '國泰永續高股息', symbol: '00878', apiSymbol: '00878.TW', step: 2 },
 ];
 
 export const CATEGORIES_STORAGE_KEY = 'stockCategories';
@@ -38,6 +52,8 @@ export const DEFAULT_CATEGORIES = [
     { name: '國際市值型 ETF',    step: 2, dot: 2 },
     { name: '美債券 ETF',        step: 3, dot: 3 },
     { name: '短線操作（個股）',  step: 4, dot: 4 },
+    { name: '其他-回本後賣出轉成ETF', step: 4, dot: 0 },
+    { name: '台灣高股息 ETF',    step: 2, dot: 1 },
 ];
 
 export const DOT_COUNT = 5;
