@@ -109,6 +109,13 @@
                 </li>
                 <li><b>更新時間</b>：股價與 K 值數據時間以表格中的「<b>源</b>」時間為準。</li>
                 <li><b>KD 交叉</b>：交叉偵測採用過去 <b>4 個交易日</b>的收盤數據；訊號有效性則以<b>盤中即時 K/D</b> 判斷，能即時反映盤中走勢。盤中訊號可能因股價波動而動態更新，此為預期行為。</li>
+                <li>
+                    <b>操作建議規則</b>：依標的所屬類別的「建議規則」產生，可在設定的「類別管理」中調整；以 K 值 <b>20 / 80</b> 為低、高檔界線。
+                    <span class="info-tooltip-wrapper" aria-label="建議規則說明">
+                        <svg class="info-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        <span class="tooltip-content tooltip-wide rule-help-content"></span>
+                    </span>
+                </li>
             </ul>
         </div>
     </main>
@@ -123,15 +130,21 @@
                         <circle cx="12" cy="12" r="3"/>
                         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
                     </svg>
-                    管理股票標的
+                    設定標的與類別
                 </h2>
                 <button class="modal-close" onclick="closeSettings()" aria-label="關閉">✕</button>
             </div>
 
+            <div class="modal-tabs" role="tablist">
+                <button id="tabBtnTargets" class="modal-tab active" role="tab" aria-selected="true" aria-controls="tabTargets" onclick="switchSettingsTab('targets')">標的 <span id="tabCountTargets" class="modal-tab-count"></span></button>
+                <button id="tabBtnCategories" class="modal-tab" role="tab" aria-selected="false" aria-controls="tabCategories" onclick="switchSettingsTab('categories')">類別 <span id="tabCountCategories" class="modal-tab-count"></span></button>
+            </div>
+
+            <!-- ── 標的分頁 ── -->
+            <div id="tabTargets" class="modal-panel" role="tabpanel">
             <div class="modal-body">
                 <div id="settingsList"></div>
             </div>
-
 
             <!-- 新增 / 編輯表單 -->
             <div class="modal-form">
@@ -153,18 +166,47 @@
                     </div>
                     <div class="field-group">
                         <label class="field-label" for="inputCategory">類別</label>
-                        <select id="inputCategory" class="form-sel" name="category">
-                            <option value="全球主要指數">全球主要指數</option>
-                            <option value="台灣市值型 ETF">台灣市值型 ETF</option>
-                            <option value="國際市值型 ETF">國際市值型 ETF</option>
-                            <option value="美債券 ETF">美債券 ETF</option>
-                            <option value="短線操作（個股）">短線操作（個股）</option>
-                        </select>
+                        <select id="inputCategory" class="form-sel" name="category"></select>
                     </div>
                     <button id="submitBtn" class="btn btn-primary" onclick="submitTargetForm()">新增</button>
                     <button id="cancelEditBtn" class="btn btn-ghost" onclick="cancelEdit()" style="display:none;">取消</button>
                 </div>
                 <p id="formError" class="form-err" style="display:none;"></p>
+            </div>
+            </div>
+
+            <!-- ── 類別分頁 ── -->
+            <div id="tabCategories" class="modal-panel" role="tabpanel" hidden>
+            <div class="modal-body">
+                <div id="categoryList"></div>
+            </div>
+
+            <div class="modal-form">
+                <span id="catFormTitle" class="modal-form-label">新增類別</span>
+                <div class="modal-form-row">
+                    <div class="field-group">
+                        <label class="field-label" for="inputCatName">類別名稱</label>
+                        <input id="inputCatName" type="text" placeholder="如 高股息 ETF"
+                            class="form-inp" style="width:170px;"
+                            name="categoryName" autocomplete="off" maxlength="30"
+                            onkeydown="if(event.key==='Enter')submitCategoryForm()" />
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="inputCatRule">
+                            建議規則
+                            <span class="info-tooltip-wrapper" aria-label="各規則差異說明" tabindex="0">
+                                <svg class="info-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                <span class="tooltip-content tooltip-wide tooltip-left rule-help-content"></span>
+                            </span>
+                        </label>
+                        <select id="inputCatRule" class="form-sel" name="categoryRule"></select>
+                    </div>
+                    <button id="catSubmitBtn" class="btn btn-primary" onclick="submitCategoryForm()">新增</button>
+                    <button id="catCancelBtn" class="btn btn-ghost" onclick="cancelCategoryEdit()" style="display:none;">取消</button>
+                </div>
+                <p id="catRuleHint" class="field-hint"></p>
+                <p id="catFormError" class="form-err" style="display:none;"></p>
+            </div>
             </div>
 
             <div class="modal-footer">

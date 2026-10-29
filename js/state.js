@@ -1,7 +1,7 @@
 // ============================================================
 // state.js — targets 狀態 + localStorage 讀寫
 // ============================================================
-import { STORAGE_KEY, DEFAULT_TARGETS, DEFAULT_INDEX_TARGETS } from './config.js';
+import { STORAGE_KEY, DEFAULT_TARGETS, DEFAULT_INDEX_TARGETS, CATEGORIES_STORAGE_KEY, DEFAULT_CATEGORIES, DOT_COUNT } from './config.js';
 
 const INDEX_MIGRATED_KEY = 'stockTargetsIndexMigrated';
 
@@ -29,8 +29,69 @@ function loadTargets() {
 
 export let targets = loadTargets();
 
+// 只接受合法的類別項目，避免壞掉的 localStorage 資料影響渲染
+function sanitizeCategories(list) {
+    if (!Array.isArray(list)) return null;
+    const seen = new Set();
+    const result = [];
+    for (const c of list) {
+        const name = typeof c?.name === 'string' ? c.name.trim() : '';
+        if (!name || seen.has(name)) continue;
+        seen.add(name);
+        result.push({
+            name,
+            step: Number.isInteger(c.step) ? c.step : 4,
+            dot: Number.isInteger(c.dot) ? ((c.dot % DOT_COUNT) + DOT_COUNT) % DOT_COUNT : result.length % DOT_COUNT,
+        });
+    }
+    return result.length ? result : null;
+}
+
+// 補齊 targets 使用、但類別清單中不存在的類別（舊資料、匯入檔）
+export function withMissingCategories(list, targetList) {
+    const result = list.map(c => ({ ...c }));
+    for (const t of targetList) {
+        if (result.some(c => c.name === t.category)) continue;
+        result.push({
+            name: t.category,
+            step: Number.isInteger(t.step) ? t.step : 4,
+            dot: result.length % DOT_COUNT,
+        });
+    }
+    return result;
+}
+
+export function parseCategories(raw) {
+    return sanitizeCategories(raw);
+}
+
+function loadCategories() {
+    let base = null;
+    try {
+        base = sanitizeCategories(JSON.parse(localStorage.getItem(CATEGORIES_STORAGE_KEY)));
+    } catch (e) {
+        console.warn('讀取類別清單失敗，改用預設類別', e);
+    }
+    return withMissingCategories(base || DEFAULT_CATEGORIES, targets);
+}
+
+export let categories = loadCategories();
+
+export function setCategories(newCategories) {
+    categories = newCategories;
+}
+
+export function getCategory(name) {
+    return categories.find(c => c.name === name) || null;
+}
+
+export function categoryDotClass(name) {
+    return `dot-${getCategory(name)?.dot ?? 1}`;
+}
+
 export function saveTargets() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(targets));
+    localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(categories));
 }
 
 export function setTargets(newTargets) {

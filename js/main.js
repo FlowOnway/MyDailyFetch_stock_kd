@@ -1,13 +1,16 @@
 // ============================================================
 // main.js — 進入點：loadData + bootstrap + 全域函式綁定
 // ============================================================
-import { CATEGORY_DOT } from './config.js';
-import { targets, toggleAttention } from './state.js';
+import { RULE_OPTIONS } from './config.js';
+import { targets, categories, toggleAttention, categoryDotClass } from './state.js';
 import { fetchStockData } from './api.js';
-import { renderRow, renderSkeletonRow, escapeHtml, toggleMemoPanel, closeMemoDrawer, switchMemoTab } from './ui.js';
+import { renderRow, renderSkeletonRow, escapeHtml, ruleHelpHtml, toggleMemoPanel, closeMemoDrawer, switchMemoTab } from './ui.js';
 import {
     openSettings, closeSettings, renderSettingsList,
     editTarget, cancelEdit, deleteTarget, submitTargetForm,
+    editCategory, cancelCategoryEdit, submitCategoryForm,
+    deleteCategory, confirmDeleteCategory, cancelDeleteCategory,
+    switchSettingsTab, addTargetToCategory,
     saveSettings, exportTargets, importTargets,
 } from './settings.js';
 
@@ -30,22 +33,18 @@ async function loadData(forceFresh = false) {
     progLabel.textContent = '正在即時抓取最新資料…';
     progPct.textContent = '0%';
 
-    // Group targets by category (preserve order)
+    // Group targets by category (依類別清單順序，與設定視窗一致)
     const grouped = {};
-    const catOrder = [];
     targets.forEach(t => {
-        if (!grouped[t.category]) {
-            grouped[t.category] = [];
-            catOrder.push(t.category);
-        }
-        grouped[t.category].push(t);
+        (grouped[t.category] ||= []).push(t);
     });
+    const catOrder = categories.map(c => c.name).filter(name => grouped[name]);
 
     // Build skeleton rows — one group-header + N skeleton rows per category
     tableBody.innerHTML = '';
     const skeletonMap = {};
     catOrder.forEach(cat => {
-        const dotCls = CATEGORY_DOT[cat] || 'dot-1';
+        const dotCls = categoryDotClass(cat);
         const headerTr = document.createElement('tr');
         headerTr.className = 'cat-group-row';
         headerTr.innerHTML = `<td colspan="8"><div class="cat-group-inner"><span class="dot ${dotCls}"></span>${escapeHtml(cat)}</div></td>`;
@@ -94,11 +93,20 @@ async function loadData(forceFresh = false) {
     }
 }
 
+// 頁尾「建議規則」說明與類別管理共用 RULE_OPTIONS
+function renderRuleHelp() {
+    const html = ruleHelpHtml(RULE_OPTIONS);
+    document.querySelectorAll('.rule-help-content').forEach((el) => { el.innerHTML = html; });
+}
+
 // 監聽 settings.js 發出的重新載入事件（避免循環依賴）
 document.addEventListener('stock:reload', () => loadData(true));
 
 // 首次開頁直接即時抓取
-window.onload = () => loadData(false);
+window.onload = () => {
+    renderRuleHelp();
+    loadData(false);
+};
 
 // ── 全域函式綁定（供 HTML onclick 使用）──────────────────────
 window.loadData          = loadData;
@@ -109,6 +117,14 @@ window.editTarget        = editTarget;
 window.cancelEdit        = cancelEdit;
 window.deleteTarget      = deleteTarget;
 window.submitTargetForm  = submitTargetForm;
+window.editCategory      = editCategory;
+window.cancelCategoryEdit = cancelCategoryEdit;
+window.submitCategoryForm = submitCategoryForm;
+window.deleteCategory    = deleteCategory;
+window.confirmDeleteCategory = confirmDeleteCategory;
+window.cancelDeleteCategory  = cancelDeleteCategory;
+window.switchSettingsTab = switchSettingsTab;
+window.addTargetToCategory = addTargetToCategory;
 window.saveSettings      = saveSettings;
 window.exportTargets     = exportTargets;
 window.importTargets     = importTargets;

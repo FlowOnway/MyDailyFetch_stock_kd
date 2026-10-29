@@ -1,13 +1,18 @@
 // ============================================================
 // settings.js — 設定 Modal CRUD + 匯出/匯入
 // ============================================================
-import { CATEGORY_DOT, deriveStep, deriveApiSymbol } from './config.js';
-import { targets, setTargets, saveTargets } from './state.js';
-import { escapeHtml, escapeAttr } from './ui.js';
+import { RULE_OPTIONS, DOT_COUNT, deriveStep, deriveApiSymbol } from './config.js';
+import {
+    targets, setTargets, saveTargets,
+    categories, setCategories, getCategory, withMissingCategories, parseCategories,
+} from './state.js';
+import { escapeHtml, escapeAttr, ruleDetailHtml } from './ui.js';
 import { fetchYahooData } from './api.js';
 import { getAllMemos, importMemos } from './memo.js';
 
 let editingSymbol = null;
+let editingCategory = null;
+let pendingDeleteCategory = null;
 let symbolLookupTimer = null;
 let symbolLookupSeq = 0;
 let symbolLookupBound = false;
@@ -111,34 +116,70 @@ function requestReload() {
 export function openSettings() {
     bindAutoFillEvents();
     document.getElementById('settingsModal').style.display = 'flex';
+    populateRuleSelect();
+    renderCategoryList();
+    populateCategorySelect();
     renderSettingsList();
+    switchSettingsTab('targets');
 }
 
 export function closeSettings() {
     document.getElementById('settingsModal').style.display = 'none';
     cancelEdit();
+    cancelCategoryEdit();
+}
+
+export function switchSettingsTab(tab) {
+    for (const name of ['targets', 'categories']) {
+        const active = name === tab;
+        const suffix = name === 'targets' ? 'Targets' : 'Categories';
+        const btn = document.getElementById(`tabBtn${suffix}`);
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', String(active));
+        document.getElementById(`tab${suffix}`).hidden = !active;
+    }
+}
+
+function updateTabCounts() {
+    document.getElementById('tabCountTargets').textContent = targets.length;
+    document.getElementById('tabCountCategories').textContent = categories.length;
+}
+
+// 從群組標題的「＋」直接帶入類別開始新增標的
+export function addTargetToCategory(name) {
+    cancelEdit();
+    document.getElementById('inputCategory').value = name;
+    document.getElementById('inputSymbol').focus();
 }
 
 export function renderSettingsList() {
+    updateTabCounts();
     const list = document.getElementById('settingsList');
     if (targets.length === 0) {
         list.innerHTML = '<div style="padding:32px 22px;text-align:center;color:var(--text-dim);font-size:13px;">尚無任何標的，請從下方新增</div>';
         return;
     }
-    list.innerHTML = targets.map((t) => {
-        const dotCls = CATEGORY_DOT[t.category] || 'dot-1';
-        return `<div class="set-item">
+    list.innerHTML = categories.map((c) => {
+        const items = targets.filter(t => t.category === c.name);
+        if (items.length === 0) return '';
+        const name = escapeHtml(c.name);
+        const header = `<div class="set-group">
+            <span class="dot dot-${c.dot}" style="flex-shrink:0;"></span>
+            <span class="set-group-name">${name}</span>
+            <span class="set-group-count">${items.length}</span>
+            <button data-name="${name}" onclick="addTargetToCategory(this.dataset.name)" class="btn btn-ghost set-group-add" aria-label="新增標的到 ${name}">＋ 新增</button>
+        </div>`;
+        const rows = items.map(t => `<div class="set-item">
             <div class="set-item-info">
-                <span class="dot ${dotCls}" style="flex-shrink:0;"></span>
                 <span class="set-item-name">${escapeHtml(t.name)}</span>
                 <span class="code-tag">${escapeHtml(t.symbol)}</span>
-                <span class="set-item-cat">${escapeHtml(t.category)}</span>
             </div>
             <div class="set-item-btns">
                 <button data-sym="${escapeAttr(t.symbol)}" onclick="editTarget(this.dataset.sym)" class="btn btn-ghost" style="padding:4px 10px;font-size:12px;">編輯</button>
                 <button data-sym="${escapeAttr(t.symbol)}" onclick="deleteTarget(this.dataset.sym)" class="btn btn-danger" style="padding:4px 10px;font-size:12px;">刪除</button>
             </div>
-        </div>`;
+        </div>`).join('');
+        return header + rows;
     }).join('');
 }
 
@@ -165,7 +206,7 @@ export function cancelEdit() {
     document.getElementById('inputSymbol').value = '';
     document.getElementById('inputName').value = '';
     document.getElementById('inputName').dataset.autofilled = '0';
-    document.getElementById('inputCategory').value = '台灣市值型 ETF';
+    document.getElementById('inputCategory').value = defaultCategoryName();
     document.getElementById('formTitle').textContent = '新增標的';
     document.getElementById('submitBtn').textContent = '新增';
     document.getElementById('cancelEditBtn').style.display = 'none';
@@ -175,6 +216,189 @@ export function cancelEdit() {
 export function deleteTarget(symbol) {
     setTargets(targets.filter(t => t.symbol !== symbol));
     renderSettingsList();
+    renderCategoryList();
+}
+
+// ── 類別管理 ────────────────────────────────────────────────
+
+function defaultCategoryName() {
+    return getCategory('台灣市值型 ETF')?.name ?? categories[0]?.name ?? '';
+}
+
+function nextDot() {
+    const used = new Set(categories.map(c => c.dot));
+    for (let i = 0; i < DOT_COUNT; i++) if (!used.has(i)) return i;
+    return categories.length % DOT_COUNT;
+}
+
+function showCategoryError(msg) {
+    const el = document.getElementById('catFormError');
+    el.textContent = msg;
+    el.style.display = '';
+}
+
+function populateCategorySelect(preferred) {
+    const sel = document.getElementById('inputCategory');
+    const current = preferred ?? sel.value;
+    sel.innerHTML = categories
+        .map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`)
+        .join('');
+    sel.value = getCategory(current) ? current : defaultCategoryName();
+}
+
+function updateRuleHint() {
+    const sel = document.getElementById('inputCatRule');
+    const rule = RULE_OPTIONS.find(r => String(r.step) === sel.value);
+    document.getElementById('catRuleHint').innerHTML = rule ? ruleDetailHtml(rule) : '';
+}
+
+function populateRuleSelect() {
+    const sel = document.getElementById('inputCatRule');
+    if (!sel.options.length) {
+        sel.innerHTML = RULE_OPTIONS
+            .map(r => `<option value="${r.step}">${escapeHtml(r.label)}</option>`)
+            .join('');
+        sel.value = '4';
+        sel.addEventListener('change', updateRuleHint);
+    }
+    updateRuleHint();
+}
+
+function refreshCategoryViews(preferredCategory) {
+    renderCategoryList();
+    populateCategorySelect(preferredCategory);
+    renderSettingsList();
+}
+
+export function renderCategoryList() {
+    updateTabCounts();
+    const list = document.getElementById('categoryList');
+    list.innerHTML = categories.map((c) => {
+        const count = targets.filter(t => t.category === c.name).length;
+        const rule = RULE_OPTIONS.find(r => r.step === c.step)?.label ?? `規則 ${c.step}`;
+        const name = escapeHtml(c.name);
+        const row = `<div class="set-item">
+            <div class="set-item-info">
+                <span class="dot dot-${c.dot}" style="flex-shrink:0;"></span>
+                <span class="set-item-name">${name}</span>
+                <span class="set-item-cat">${escapeHtml(rule)}・${count} 檔</span>
+            </div>
+            <div class="set-item-btns">
+                <button data-name="${name}" onclick="editCategory(this.dataset.name)" class="btn btn-ghost" style="padding:4px 10px;font-size:12px;">編輯</button>
+                <button data-name="${name}" onclick="deleteCategory(this.dataset.name)" class="btn btn-danger" style="padding:4px 10px;font-size:12px;">刪除</button>
+            </div>
+        </div>`;
+        if (pendingDeleteCategory !== c.name) return row;
+
+        const options = categories
+            .filter(o => o.name !== c.name)
+            .map(o => `<option value="${escapeHtml(o.name)}">${escapeHtml(o.name)}</option>`)
+            .join('');
+        return row + `<div class="cat-move">
+            <span>「${name}」底下有 ${count} 檔標的，移到：</span>
+            <select id="catMoveTo" class="form-sel">${options}</select>
+            <button data-name="${name}" onclick="confirmDeleteCategory(this.dataset.name)" class="btn btn-danger" style="padding:4px 10px;font-size:12px;">移動並刪除</button>
+            <button onclick="cancelDeleteCategory()" class="btn btn-ghost" style="padding:4px 10px;font-size:12px;">取消</button>
+        </div>`;
+    }).join('');
+}
+
+export function editCategory(name) {
+    const cat = getCategory(name);
+    if (!cat) return;
+    editingCategory = name;
+    pendingDeleteCategory = null;
+    document.getElementById('inputCatName').value = cat.name;
+    document.getElementById('inputCatRule').value = String(cat.step);
+    updateRuleHint();
+    document.getElementById('catFormTitle').textContent = `✏ 編輯類別：${cat.name}`;
+    document.getElementById('catSubmitBtn').textContent = '更新';
+    document.getElementById('catCancelBtn').style.display = '';
+    document.getElementById('catFormError').style.display = 'none';
+    renderCategoryList();
+    document.getElementById('inputCatName').focus();
+}
+
+export function cancelCategoryEdit() {
+    editingCategory = null;
+    document.getElementById('inputCatName').value = '';
+    document.getElementById('inputCatRule').value = '4';
+    updateRuleHint();
+    document.getElementById('catFormTitle').textContent = '新增類別';
+    document.getElementById('catSubmitBtn').textContent = '新增';
+    document.getElementById('catCancelBtn').style.display = 'none';
+    document.getElementById('catFormError').style.display = 'none';
+}
+
+export function submitCategoryForm() {
+    const name = document.getElementById('inputCatName').value.trim();
+    const step = Number(document.getElementById('inputCatRule').value);
+
+    if (!name) return showCategoryError('請輸入類別名稱');
+    if (categories.some(c => c.name === name && c.name !== editingCategory)) {
+        return showCategoryError(`類別「${name}」已存在`);
+    }
+
+    const selectedBefore = document.getElementById('inputCategory').value;
+    let preferred = selectedBefore;
+
+    if (editingCategory) {
+        const oldName = editingCategory;
+        setCategories(categories.map(c => (c.name === oldName ? { ...c, name, step } : c)));
+        targets.forEach((t) => {
+            if (t.category === oldName) {
+                t.category = name;
+                t.step = step;
+            }
+        });
+        if (selectedBefore === oldName) preferred = name;
+    } else {
+        setCategories([...categories, { name, step, dot: nextDot() }]);
+        preferred = name;
+    }
+
+    pendingDeleteCategory = null;
+    cancelCategoryEdit();
+    refreshCategoryViews(preferred);
+}
+
+export function deleteCategory(name) {
+    if (categories.length <= 1) return showCategoryError('至少需保留一個類別');
+
+    const count = targets.filter(t => t.category === name).length;
+    document.getElementById('catFormError').style.display = 'none';
+    if (count > 0) {
+        pendingDeleteCategory = name;
+        renderCategoryList();
+        return;
+    }
+
+    setCategories(categories.filter(c => c.name !== name));
+    if (editingCategory === name) cancelCategoryEdit();
+    refreshCategoryViews();
+}
+
+export function cancelDeleteCategory() {
+    pendingDeleteCategory = null;
+    renderCategoryList();
+}
+
+export function confirmDeleteCategory(name) {
+    const destName = document.getElementById('catMoveTo')?.value;
+    const dest = getCategory(destName);
+    if (!dest || dest.name === name) return;
+
+    targets.forEach((t) => {
+        if (t.category === name) {
+            t.category = dest.name;
+            t.step = dest.step;
+        }
+    });
+    const selectedBefore = document.getElementById('inputCategory').value;
+    setCategories(categories.filter(c => c.name !== name));
+    pendingDeleteCategory = null;
+    if (editingCategory === name) cancelCategoryEdit();
+    refreshCategoryViews(selectedBefore === name ? dest.name : selectedBefore);
 }
 
 export async function submitTargetForm() {
@@ -210,7 +434,7 @@ export async function submitTargetForm() {
         name,
         symbol,
         apiSymbol: resolvedApiSymbol,
-        step: deriveStep(category),
+        step: getCategory(category)?.step ?? deriveStep(category),
     };
 
     if (editingSymbol) {
@@ -222,6 +446,7 @@ export async function submitTargetForm() {
 
     cancelEdit();
     renderSettingsList();
+    renderCategoryList();
     errEl.style.display = 'none';
 }
 
@@ -234,6 +459,7 @@ export function saveSettings() {
 export function exportTargets() {
     const exportData = {
         targets: targets,
+        categories: categories,
         memos: getAllMemos(),
     };
     const json = JSON.stringify(exportData, null, 2);
@@ -259,6 +485,7 @@ export function importTargets(event) {
             // 相容新格式 { targets: [...], memos: {...} } 與舊格式 […]
             let data;
             let importedMemos = null;
+            let importedCategories = null;
             if (Array.isArray(raw)) {
                 // 舊格式：純陣列
                 data = raw;
@@ -266,6 +493,7 @@ export function importTargets(event) {
                 // 新格式
                 data = raw.targets;
                 importedMemos = raw.memos || null;
+                importedCategories = parseCategories(raw.categories);
             } else {
                 throw new Error('格式不正確，需為陣列或包含 targets 欄位的物件');
             }
@@ -273,11 +501,17 @@ export function importTargets(event) {
             if (data.length === 0) throw new Error('標的清單為空');
             for (const item of data) {
                 if (!item.symbol || !item.name || !item.category) throw new Error('缺少必要欄位（symbol、name、category）');
+            }
+
+            // 匯入檔有類別清單就取代，否則沿用目前的，再補上標的用到的新類別
+            const nextCategories = withMissingCategories(importedCategories || categories, data);
+            for (const item of data) {
                 // 相容舊版匯出（補齊自動推導欄位）
-                if (item.step == null) item.step    = deriveStep(item.category);
+                if (item.step == null) item.step    = nextCategories.find(c => c.name === item.category)?.step ?? deriveStep(item.category);
                 if (!item.apiSymbol) item.apiSymbol = deriveApiSymbol(item.symbol);
             }
             setTargets(data);
+            setCategories(nextCategories);
             saveTargets();
 
             // 匯入筆記（合併模式，不會清除未在匯入檔中的筆記）
@@ -285,6 +519,9 @@ export function importTargets(event) {
                 importMemos(importedMemos, 'merge');
             }
 
+            cancelCategoryEdit();
+            renderCategoryList();
+            populateCategorySelect();
             renderSettingsList();
             const memoCount = importedMemos ? Object.keys(importedMemos).length : 0;
             const memoMsg = memoCount > 0 ? `，含 ${memoCount} 筆筆記` : '';
