@@ -13,6 +13,78 @@ import { getAllMemos, importMemos } from './memo.js';
 let editingSymbol = null;
 let editingCategory = null;
 let pendingDeleteCategory = null;
+
+// Sortable 由 index.html 以全域 script 載入；載入失敗時仍可用鍵盤調整
+const SORT_OPTIONS = {
+    handle: '.drag-handle',
+    animation: 150,
+    ghostClass: 'sort-ghost',
+    chosenClass: 'sort-chosen',
+};
+const targetSortables = [];
+const categorySortables = [];
+let sortKeyboardBound = false;
+
+function destroySortables(list) {
+    list.splice(0).forEach(s => s.destroy());
+}
+
+function dragHandle(label) {
+    return `<button type="button" class="drag-handle" aria-label="${escapeHtml(label)}（拖曳或按上下方向鍵）" title="拖曳調整順序">⋮⋮</button>`;
+}
+
+// 只重排該類別的標的，填回它在 targets 中原本佔用的位置，其他類別相對順序不變
+function commitTargetOrder(container) {
+    const category = container.dataset.cat;
+    const orderedSymbols = [...container.children].map(el => el.dataset.sym);
+    const slots = [];
+    targets.forEach((t, i) => { if (t.category === category) slots.push(i); });
+    const bySymbol = new Map(targets.map(t => [t.symbol, t]));
+    if (orderedSymbols.length !== slots.length || orderedSymbols.some(s => !bySymbol.has(s))) return;
+
+    const next = targets.slice();
+    orderedSymbols.forEach((sym, k) => { next[slots[k]] = bySymbol.get(sym); });
+    setTargets(next);
+}
+
+function commitCategoryOrder(list) {
+    const names = [...list.querySelectorAll(':scope > .cat-item')].map(el => el.dataset.name);
+    const ordered = names.map(getCategory);
+    if (ordered.length !== categories.length || ordered.some(c => !c)) return;
+    setCategories(ordered);
+    populateCategorySelect();
+    renderSettingsList();
+}
+
+function bindSortKeyboard() {
+    if (sortKeyboardBound) return;
+    sortKeyboardBound = true;
+    document.getElementById('tabTargets').addEventListener('keydown', onHandleKeydown);
+    document.getElementById('tabCategories').addEventListener('keydown', onHandleKeydown);
+}
+
+function onHandleKeydown(e) {
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    const handle = e.target.closest('.drag-handle');
+    if (!handle) return;
+    e.preventDefault();
+
+    const item = handle.closest('.cat-item, .set-item[data-sym]');
+    const up = e.key === 'ArrowUp';
+    const sibling = up ? item.previousElementSibling : item.nextElementSibling;
+    if (!sibling) return;
+    const container = item.parentElement;
+    container.insertBefore(up ? item : sibling, up ? sibling : item);
+
+    if (item.classList.contains('cat-item')) {
+        commitCategoryOrder(container);
+        // 類別列表未重繪，把焦點還給原把手
+        item.querySelector('.drag-handle').focus();
+    } else {
+        commitTargetOrder(container);
+        handle.focus();
+    }
+}
 let symbolLookupTimer = null;
 let symbolLookupSeq = 0;
 let symbolLookupBound = false;
@@ -115,6 +187,7 @@ function requestReload() {
 
 export function openSettings() {
     bindAutoFillEvents();
+    bindSortKeyboard();
     document.getElementById('settingsModal').style.display = 'flex';
     populateRuleSelect();
     renderCategoryList();
@@ -155,6 +228,7 @@ export function addTargetToCategory(name) {
 export function renderSettingsList() {
     updateTabCounts();
     const list = document.getElementById('settingsList');
+    destroySortables(targetSortables);
     if (targets.length === 0) {
         list.innerHTML = '<div style="padding:32px 22px;text-align:center;color:var(--text-dim);font-size:13px;">尚無任何標的，請從下方新增</div>';
         return;
@@ -169,8 +243,9 @@ export function renderSettingsList() {
             <span class="set-group-count">${items.length}</span>
             <button data-name="${name}" onclick="addTargetToCategory(this.dataset.name)" class="btn btn-ghost set-group-add" aria-label="新增標的到 ${name}">＋ 新增</button>
         </div>`;
-        const rows = items.map(t => `<div class="set-item">
+        const rows = items.map(t => `<div class="set-item" data-sym="${escapeAttr(t.symbol)}">
             <div class="set-item-info">
+                ${dragHandle(`調整 ${t.name} 的順序`)}
                 <span class="set-item-name">${escapeHtml(t.name)}</span>
                 <span class="code-tag">${escapeHtml(t.symbol)}</span>
             </div>
@@ -179,8 +254,16 @@ export function renderSettingsList() {
                 <button data-sym="${escapeAttr(t.symbol)}" onclick="deleteTarget(this.dataset.sym)" class="btn btn-danger" style="padding:4px 10px;font-size:12px;">刪除</button>
             </div>
         </div>`).join('');
-        return header + rows;
+        return header + `<div class="set-sortable" data-cat="${name}">${rows}</div>`;
     }).join('');
+
+    if (typeof Sortable === 'undefined') return;
+    list.querySelectorAll('.set-sortable').forEach((el) => {
+        targetSortables.push(new Sortable(el, {
+            ...SORT_OPTIONS,
+            onEnd: () => commitTargetOrder(el),
+        }));
+    });
 }
 
 export function editTarget(symbol) {
@@ -273,12 +356,14 @@ function refreshCategoryViews(preferredCategory) {
 export function renderCategoryList() {
     updateTabCounts();
     const list = document.getElementById('categoryList');
+    destroySortables(categorySortables);
     list.innerHTML = categories.map((c) => {
         const count = targets.filter(t => t.category === c.name).length;
         const rule = RULE_OPTIONS.find(r => r.step === c.step)?.label ?? `規則 ${c.step}`;
         const name = escapeHtml(c.name);
         const row = `<div class="set-item">
             <div class="set-item-info">
+                ${dragHandle(`調整類別 ${c.name} 的順序`)}
                 <span class="dot dot-${c.dot}" style="flex-shrink:0;"></span>
                 <span class="set-item-name">${name}</span>
                 <span class="set-item-cat">${escapeHtml(rule)}・${count} 檔</span>
@@ -288,19 +373,26 @@ export function renderCategoryList() {
                 <button data-name="${name}" onclick="deleteCategory(this.dataset.name)" class="btn btn-danger" style="padding:4px 10px;font-size:12px;">刪除</button>
             </div>
         </div>`;
-        if (pendingDeleteCategory !== c.name) return row;
+        if (pendingDeleteCategory !== c.name) return `<div class="cat-item" data-name="${name}">${row}</div>`;
 
         const options = categories
             .filter(o => o.name !== c.name)
             .map(o => `<option value="${escapeHtml(o.name)}">${escapeHtml(o.name)}</option>`)
             .join('');
-        return row + `<div class="cat-move">
+        return `<div class="cat-item" data-name="${name}">${row}<div class="cat-move">
             <span>「${name}」底下有 ${count} 檔標的，移到：</span>
             <select id="catMoveTo" class="form-sel">${options}</select>
             <button data-name="${name}" onclick="confirmDeleteCategory(this.dataset.name)" class="btn btn-danger" style="padding:4px 10px;font-size:12px;">移動並刪除</button>
             <button onclick="cancelDeleteCategory()" class="btn btn-ghost" style="padding:4px 10px;font-size:12px;">取消</button>
-        </div>`;
+        </div></div>`;
     }).join('');
+
+    if (typeof Sortable === 'undefined') return;
+    categorySortables.push(new Sortable(list, {
+        ...SORT_OPTIONS,
+        draggable: '.cat-item',
+        onEnd: () => commitCategoryOrder(list),
+    }));
 }
 
 export function editCategory(name) {

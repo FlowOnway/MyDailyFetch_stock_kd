@@ -143,6 +143,7 @@
             <!-- ── 標的分頁 ── -->
             <div id="tabTargets" class="modal-panel" role="tabpanel">
             <div class="modal-body">
+                <p class="sort-hint">拖曳 ⋮⋮ 調整首頁顯示順序（僅限同一類別內），調整後請按「儲存並關閉」</p>
                 <div id="settingsList"></div>
             </div>
 
@@ -178,6 +179,7 @@
             <!-- ── 類別分頁 ── -->
             <div id="tabCategories" class="modal-panel" role="tabpanel" hidden>
             <div class="modal-body">
+                <p class="sort-hint">拖曳 ⋮⋮ 調整首頁類別的顯示順序，調整後請按「儲存並關閉」</p>
                 <div id="categoryList"></div>
             </div>
 
@@ -228,6 +230,8 @@
 
     <!-- marked.js：Markdown 解析，用全域 script 載入避免本地 file:// 的 CORS 限制 -->
     <script src="https://cdn.jsdelivr.net/npm/marked@12.0.1/marked.min.js"></script>
+    <!-- SortableJS：設定視窗拖曳排序（支援觸控） -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
