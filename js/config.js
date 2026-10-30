@@ -71,7 +71,7 @@ export const RULE_OPTIONS = [
     {
         step: 1, label: '台灣市值型',
         target: '台灣市值型 ETF（如 0050），直接買賣',
-        cross: '不偵測（「KD 狀態」欄固定顯示「無」）',
+        cross: '會偵測並顯示，但不影響建議',
         low: '「買進台灣市值型 ETF」',
         high: '「賣出台灣市值型 ETF」',
     },

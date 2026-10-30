@@ -183,56 +183,52 @@ export function buildAnalysisFromYahooData(item, parsed, fetchedAt) {
     let kdCross = '無';
     let remark = '';
 
-    if (item.step !== 1) {
-        // ── KD 交叉偵測：使用 kdDataClosed（收盤確認版）────────────────
-        // 交叉偵測以「收盤」為準，確保訊號基準不受盤中雜訊干擾
-        // 回溯 4 根 K 棒（約 1 週），訊號保持新鮮、貼近近期走勢
-        const EPS = 1e-6;
-        const lookbackBars = 4;
-        const startIdx = Math.max(1, kdDataClosed.length - lookbackBars);
+    // ── KD 交叉偵測：使用 kdDataClosed（收盤確認版）────────────────
+    // 交叉偵測以「收盤」為準，確保訊號基準不受盤中雜訊干擾
+    // 回溯 4 根 K 棒（約 1 週），訊號保持新鮮、貼近近期走勢
+    const EPS = 1e-6;
+    const lookbackBars = 4;
+    const startIdx = Math.max(1, kdDataClosed.length - lookbackBars);
 
-        for (let i = kdDataClosed.length - 1; i >= startIdx; i--) {
-            const p = kdDataClosed[i - 1];
-            const c = kdDataClosed[i];
-            if (!p || !c) continue;
-            if (!Number.isFinite(p.k) || !Number.isFinite(p.d) || !Number.isFinite(c.k) || !Number.isFinite(c.d)) continue;
+    for (let i = kdDataClosed.length - 1; i >= startIdx; i--) {
+        const p = kdDataClosed[i - 1];
+        const c = kdDataClosed[i];
+        if (!p || !c) continue;
+        if (!Number.isFinite(p.k) || !Number.isFinite(p.d) || !Number.isFinite(c.k) || !Number.isFinite(c.d)) continue;
 
-            const prevKBelowD = p.k < p.d - EPS;
-            const prevKAboveD = p.k > p.d + EPS;
-            const currKAboveD = c.k > c.d + EPS;
-            const currKBelowD = c.k < c.d - EPS;
+        const prevKBelowD = p.k < p.d - EPS;
+        const prevKAboveD = p.k > p.d + EPS;
+        const currKAboveD = c.k > c.d + EPS;
+        const currKBelowD = c.k < c.d - EPS;
 
-            // 黃金交叉：K 由下往上穿越 D，且穿越時 K <= 50（排除高位震盪假訊號）
-            if (prevKBelowD && currKAboveD && c.k <= 50) {
-                kdCross = '黃金交叉';
-                break;
-            }
-            // 死亡交叉：K 由上往下穿越 D，且穿越時 K >= 50（排除低位震盪假訊號）
-            if (prevKAboveD && currKBelowD && c.k >= 50) {
-                kdCross = '死亡交叉';
-                break;
-            }
+        // 黃金交叉：K 由下往上穿越 D，且穿越時 K <= 50（排除高位震盪假訊號）
+        if (prevKBelowD && currKAboveD && c.k <= 50) {
+            kdCross = '黃金交叉';
+            break;
         }
-
-        // ── 現況一致性驗證（使用盤中即時 K/D）──────────────────────────
-        // 以「盤中即時 K/D」判斷訊號是否仍然有效，而非最後一根收盤。
-        if (kdCross !== '無') {
-            let latestIntraday = null;
-            for (let i = kdData.length - 1; i >= 0; i--) {
-                if (Number.isFinite(kdData[i].k)) { latestIntraday = kdData[i]; break; }
-            }
-            if (latestIntraday) {
-                const EPS = 1e-6;
-                const kNowAboveD = latestIntraday.k > latestIntraday.d + EPS;
-                const kNowBelowD = latestIntraday.k < latestIntraday.d - EPS;
-                // 死亡交叉但盤中 K 已反向回到 D 上方 → 訊號失效
-                if (kdCross === '死亡交叉' && kNowAboveD) kdCross = '無';
-                // 黃金交叉但盤中 K 已反向跌回 D 下方 → 訊號失效
-                if (kdCross === '黃金交叉' && kNowBelowD) kdCross = '無';
-            }
+        // 死亡交叉：K 由上往下穿越 D，且穿越時 K >= 50（排除低位震盪假訊號）
+        if (prevKAboveD && currKBelowD && c.k >= 50) {
+            kdCross = '死亡交叉';
+            break;
         }
-    } else {
-        kdCross = '—';
+    }
+
+    // ── 現況一致性驗證（使用盤中即時 K/D）──────────────────────────
+    // 以「盤中即時 K/D」判斷訊號是否仍然有效，而非最後一根收盤。
+    if (kdCross !== '無') {
+        let latestIntraday = null;
+        for (let i = kdData.length - 1; i >= 0; i--) {
+            if (Number.isFinite(kdData[i].k)) { latestIntraday = kdData[i]; break; }
+        }
+        if (latestIntraday) {
+            const EPS = 1e-6;
+            const kNowAboveD = latestIntraday.k > latestIntraday.d + EPS;
+            const kNowBelowD = latestIntraday.k < latestIntraday.d - EPS;
+            // 死亡交叉但盤中 K 已反向回到 D 上方 → 訊號失效
+            if (kdCross === '死亡交叉' && kNowAboveD) kdCross = '無';
+            // 黃金交叉但盤中 K 已反向跌回 D 下方 → 訊號失效
+            if (kdCross === '黃金交叉' && kNowBelowD) kdCross = '無';
+        }
     }
 
     const analysis = analyzeData(item.step, kVal, kdCross);
