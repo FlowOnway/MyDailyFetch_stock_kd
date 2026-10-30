@@ -215,6 +215,12 @@ body {
 .k-fill   { height: 100%; border-radius: 2px; transition: width 0.9s cubic-bezier(0.22,0.61,0.36,1); }
 .k-val    { font-size: 12px; font-family: 'IBM Plex Mono', monospace; color: var(--text-secondary); min-width: 32px; font-variant-numeric: tabular-nums; }
 
+/* K 值較前一交易日的方向：台股慣例，紅漲綠跌（與進度條的高低檔配色語意不同，僅表示方向） */
+.k-trend      { font-size: 11px; font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; min-width: 40px; white-space: nowrap; flex-shrink: 0; }
+.k-trend-up   { color: #f85149; }
+.k-trend-down { color: #3fb950; }
+.k-trend-flat { color: var(--text-dim); }
+
 /* ── Code tag ── */
 .code-tag {
     font-family: 'IBM Plex Mono', monospace; font-size: 11px;

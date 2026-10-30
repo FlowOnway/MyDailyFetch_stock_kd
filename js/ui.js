@@ -43,6 +43,20 @@ function kBarColor(k) {
     return '#d29922';
 }
 
+// K 值較前一交易日的方向（紅漲綠跌，僅供顯示）
+function kTrendHtml(row) {
+    const delta = parseFloat(row.kDelta);
+    if (!row.kTrend || isNaN(delta)) return '';
+    const title = `K ${row.kVal}，前一交易日 K ${row.kPrev}，變化 ${delta > 0 ? '+' : ''}${row.kDelta}`;
+    if (row.kTrend === 'flat') {
+        return `<span class="k-trend k-trend-flat" title="${escapeHtml(title)}" aria-label="K 值較前一交易日持平">─</span>`;
+    }
+    const up = row.kTrend === 'up';
+    const text = `${up ? '▲' : '▼'}${Math.abs(delta).toFixed(1)}`;
+    const label = `K 值較前一交易日${up ? '上升' : '下降'} ${Math.abs(delta).toFixed(1)}`;
+    return `<span class="k-trend ${up ? 'k-trend-up' : 'k-trend-down'}" title="${escapeHtml(title)}" aria-label="${label}">${text}</span>`;
+}
+
 function locationBadge(loc) {
     if (loc === '低點') return `<span class="badge bdg-low">低點</span>`;
     if (loc === '高點') return `<span class="badge bdg-high">高點</span>`;
@@ -81,6 +95,7 @@ export function renderRow(row) {
                <span class="k-label">K</span>
                <div class="k-track"><div class="k-fill" style="width:${Math.min(100, Math.max(0, kNum)).toFixed(1)}%;background:${kBarColor(kNum)};"></div></div>
                <span class="k-val">${row.kVal}</span>
+               ${kTrendHtml(row)}
            </div>`
         : `<span style="color:var(--text-dim);">—</span>`;
 

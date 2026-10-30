@@ -2,7 +2,7 @@
 // api.js — Yahoo Finance 資料獲取層
 // ============================================================
 import { PROXY_GENERATORS } from './config.js';
-import { calculateKD, analyzeData } from './indicators.js';
+import { calculateKD, calcKTrend, analyzeData, repairDailyBars, hasRecentMissingBars, isPrevBarMissing } from './indicators.js';
 
 // 版本標記：讓開發者在 Console 確認是否載入了最新版本
 console.log('[api.js] ✅ 已載入（Cloudflare Worker 版，快照機制已移除）');
@@ -28,12 +28,12 @@ export function formatLocalDate(date) {
 }
 
 export async function fetchYahooData(symbol, options = {}) {
-    const { forceFresh = false } = options;
+    const { forceFresh = false, interval = '1d', range = '6mo' } = options;
 
     // 一般情況採短秒級快取；強制刷新時改為毫秒鍵，盡量取最新
     const cacheKey = buildCacheKey(forceFresh);
 
-    const endpoint = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=6mo&_=${cacheKey}`;
+    const endpoint = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=${interval}&range=${range}&_=${cacheKey}`;
 
     let lastError;
 
@@ -137,9 +137,10 @@ export function buildErrorResult(item, fetchedAt, remark = '網路或伺服器�
 }
 
 // 純計算：把 Yahoo chart JSON 轉成畫面用的資料列（無網路呼叫）
-export function buildAnalysisFromYahooData(item, parsed, fetchedAt) {
+// intradayParsed 為選用的日內資料，僅用於補日 K 缺漏的交易日；prevClose 為前一交易日的官方收盤價
+export function buildAnalysisFromYahooData(item, parsed, fetchedAt, intradayParsed = null, prevClose = null) {
     const result = parsed.chart.result[0];
-    const quotes = result.indicators.quote[0];
+    const quotes = repairDailyBars(result, intradayParsed?.chart?.result?.[0] ?? null, prevClose);
     const meta = result.meta || {};
 
     // ── 即時股價：優先使用 meta.regularMarketPrice（盤中即時更新）
@@ -160,8 +161,9 @@ export function buildAnalysisFromYahooData(item, parsed, fetchedAt) {
     if (metaPrice !== null) {
         const lastIdx = closes.length - 1;
         // 以今日盤中 high/low/close 覆蓋（meta 欄位在盤中會即時更新）
-        if (typeof meta.regularMarketDayHigh === 'number') highs[lastIdx]  = meta.regularMarketDayHigh;
-        if (typeof meta.regularMarketDayLow  === 'number') lows[lastIdx]   = meta.regularMarketDayLow;
+        // 未開盤的市場（如歐股）meta 高低價會是 0，必須排除，否則會把 RSV 算歪
+        if (meta.regularMarketDayHigh > 0) highs[lastIdx] = meta.regularMarketDayHigh;
+        if (meta.regularMarketDayLow  > 0) lows[lastIdx]  = meta.regularMarketDayLow;
         closes[lastIdx] = metaPrice;
     }
 
@@ -237,6 +239,9 @@ export function buildAnalysisFromYahooData(item, parsed, fetchedAt) {
 
     const analysis = analyzeData(item.step, kVal, kdCross);
 
+    // K 值方向（僅供顯示，不影響建議）
+    const kTrend = calcKTrend(kdData);
+
     // ── 更新時間：優先使用 meta.regularMarketTime（即時交易時間），
     // result.timestamp 最後一筆只是今日日 K 棒的開盤時間，精確度不足
     const sourceEpoch = (typeof meta.regularMarketTime === 'number')
@@ -252,6 +257,9 @@ export function buildAnalysisFromYahooData(item, parsed, fetchedAt) {
         ...item,
         price: formattedPrice,
         kVal: kVal.toFixed(2),
+        kTrend: kTrend ? kTrend.trend : '',
+        kDelta: kTrend ? kTrend.delta.toFixed(2) : '',
+        kPrev: kTrend ? kTrend.prev.toFixed(2) : '',
         kdCross,
         location: analysis.location,
         advice: analysis.advice,
@@ -268,6 +276,7 @@ export async function fetchStockData(item, options = {}) {
 
     try {
         let parsed;
+        let usedSymbol = item.apiSymbol;
         try {
             parsed = await fetchYahooData(item.apiSymbol, { forceFresh });
         } catch (error) {
@@ -281,6 +290,7 @@ export async function fetchStockData(item, options = {}) {
                 }
                 if (fallbackSymbol) {
                     parsed = await fetchYahooData(fallbackSymbol, { forceFresh });
+                    usedSymbol = fallbackSymbol;
                 } else {
                     throw error;
                 }
@@ -288,7 +298,27 @@ export async function fetchStockData(item, options = {}) {
                 throw error;
             }
         }
-        return buildAnalysisFromYahooData(item, parsed, fetchedAt);
+
+        // 日 K 有缺漏的交易日時才多抓日內資料；失敗就沿用原本略過缺漏的算法
+        let intradayParsed = null;
+        let prevClose = null;
+        if (hasRecentMissingBars(parsed.chart.result[0])) {
+            try {
+                intradayParsed = await fetchYahooData(usedSymbol, { forceFresh, interval: '5m', range: '1mo' });
+            } catch (e) {
+                console.warn(`補 ${item.symbol} 日 K 缺漏失敗:`, e.message || e);
+            }
+            // 前一天缺漏時，改用官方前收盤價，避免日內最後一筆少了尾盤集合競價造成誤差
+            if (intradayParsed && isPrevBarMissing(parsed.chart.result[0])) {
+                try {
+                    const latest = await fetchYahooData(usedSymbol, { forceFresh, interval: '1d', range: '1d' });
+                    prevClose = latest.chart.result[0].meta?.chartPreviousClose ?? null;
+                } catch (e) {
+                    console.warn(`取得 ${item.symbol} 前收盤價失敗:`, e.message || e);
+                }
+            }
+        }
+        return buildAnalysisFromYahooData(item, parsed, fetchedAt, intradayParsed, prevClose);
     } catch (error) {
         console.warn(`獲取 ${item.symbol} 失敗:`, error.message || error);
         return buildErrorResult(item, fetchedAt);
